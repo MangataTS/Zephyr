@@ -1,0 +1,168 @@
+<Window x:Class="ZephyrDesktop.Views.NoteOverviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="轻燕任务" Height="600" Width="500"
+        WindowStyle="None" AllowsTransparency="True"
+        Background="Transparent"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize"
+        ShowInTaskbar="False">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <Style x:Key="FilterRadioButtonStyle" TargetType="RadioButton">
+            <Setter Property="Background" Value="#1e293b"/>
+            <Setter Property="Foreground" Value="#94a3b8"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="12,5"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#334155"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#3B82F6"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Border CornerRadius="12" Margin="4" Background="#0f172a">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.3" Color="#000000"/>
+        </Border.Effect>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="44"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Image x:Name="PureBackgroundImage" Stretch="UniformToFill" Opacity="0.10" VerticalAlignment="Bottom" Height="250" Grid.RowSpan="5"/>
+
+            <Border Grid.Row="0" Background="#1e293b" CornerRadius="12,12,0,0"
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid Margin="16,0">
+                    <TextBlock Text="轻燕任务" FontSize="14" FontWeight="SemiBold"
+                               Foreground="White" VerticalAlignment="Center"/>
+                    <Button x:Name="CloseButton" Content="✕" FontSize="12"
+                            Width="28" Height="28" HorizontalAlignment="Right"
+                            Background="Transparent" Foreground="#94a3b8"
+                            BorderThickness="0" Cursor="Hand"
+                            Click="CloseButton_Click"/>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="1" Margin="16,12,16,0">
+                <Border Background="#1a2332" CornerRadius="8" Padding="8,6">
+                    <TextBox x:Name="SearchBox"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Background="Transparent" Foreground="#e2e8f0"
+                             BorderThickness="0" FontSize="13"
+                             CaretBrush="#94a3b8"
+                             VerticalContentAlignment="Center"/>
+                </Border>
+                <TextBlock x:Name="SearchPlaceholder" Text="🔍 搜索任务..." FontSize="13" Foreground="#64748b"
+                           VerticalAlignment="Center" Margin="20,0,0,0"
+                           IsHitTestVisible="False"/>
+            </Grid>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="16,10,16,0">
+                <RadioButton x:Name="FilterAll" Content="全部" GroupName="Filter"
+                             IsChecked="True" Click="FilterButton_Click"
+                             Tag="All" Style="{StaticResource FilterRadioButtonStyle}"/>
+                <RadioButton x:Name="FilterMine" Content="我的" GroupName="Filter"
+                             Click="FilterButton_Click"
+                             Tag="Mine" Style="{StaticResource FilterRadioButtonStyle}" Margin="6,0,0,0"/>
+                <RadioButton x:Name="FilterAssigned" Content="指派" GroupName="Filter"
+                             Click="FilterButton_Click"
+                             Tag="Assigned" Style="{StaticResource FilterRadioButtonStyle}" Margin="6,0,0,0"/>
+                <RadioButton x:Name="FilterReminded" Content="盯办" GroupName="Filter"
+                             Click="FilterButton_Click"
+                             Tag="Reminded" Style="{StaticResource FilterRadioButtonStyle}" Margin="6,0,0,0"/>
+                <RadioButton x:Name="FilterCompleted" Content="已完成" GroupName="Filter"
+                             Click="FilterButton_Click"
+                             Tag="Completed" Style="{StaticResource FilterRadioButtonStyle}" Margin="6,0,0,0"/>
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="3" x:Name="NotesScrollViewer"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Margin="8,8,8,0" Background="Transparent">
+                <ItemsControl x:Name="NotesItemsControl"
+                              ItemsSource="{Binding FilteredNotes}"
+                              Background="Transparent" BorderThickness="0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="#1a2332" CornerRadius="8" Padding="12,10" Margin="4,3">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Ellipse Grid.Column="0" Width="10" Height="10"
+                                             VerticalAlignment="Center" Margin="0,0,10,0">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="#FBBF24"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ColorStatus}" Value="red">
+                                                        <Setter Property="Fill" Value="#EF4444"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ColorStatus}" Value="green">
+                                                        <Setter Property="Fill" Value="#22C55E"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="Medium"
+                                                   Foreground="#e2e8f0" TextTrimming="CharacterEllipsis"
+                                                   MaxWidth="300"/>
+                                        <TextBlock FontSize="11" Foreground="#64748b" Margin="0,3,0,0">
+                                            <Run Text="{Binding SourceText, Mode=OneWay}"/><Run Text="{Binding DueTimeText, Mode=OneWay}"/>
+                                        </TextBlock>
+                                        <Border Background="#FDE68A" CornerRadius="3" Padding="4,0"
+                                                Margin="0,2,0,0" HorizontalAlignment="Left"
+                                                Visibility="{Binding HasConflict, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="⚠ 冲突" FontSize="9" Foreground="#92400E" FontWeight="Medium"/>
+                                        </Border>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="2" Content="聚焦" FontSize="11"
+                                            Padding="10,4" VerticalAlignment="Center"
+                                            Background="#334155" Foreground="#e2e8f0"
+                                            BorderThickness="0" Cursor="Hand"
+                                            Click="FocusButton_Click"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <Border Grid.Row="4" Background="#1e293b" CornerRadius="0,0,12,12" Padding="16,8">
+                <TextBlock FontSize="12" Foreground="#64748b" VerticalAlignment="Center">
+                    <Run Text="共 "/><Run Text="{Binding TotalCount, Mode=OneWay}"/><Run Text=" 个任务"/>
+                </TextBlock>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

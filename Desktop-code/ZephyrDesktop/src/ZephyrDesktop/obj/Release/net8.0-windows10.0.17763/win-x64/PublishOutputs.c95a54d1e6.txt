@@ -1,0 +1,5 @@
+D:\TRAE_projects\Zephyr-1\Desktop-code\ZephyrDesktop\src\ZephyrDesktop\publish\ZephyrDesktop.pdb
+D:\TRAE_projects\Zephyr-1\Desktop-code\ZephyrDesktop\src\ZephyrDesktop\publish\Microsoft.Web.WebView2.Core.xml
+D:\TRAE_projects\Zephyr-1\Desktop-code\ZephyrDesktop\src\ZephyrDesktop\publish\Microsoft.Web.WebView2.WinForms.xml
+D:\TRAE_projects\Zephyr-1\Desktop-code\ZephyrDesktop\src\ZephyrDesktop\publish\Microsoft.Web.WebView2.Wpf.xml
+D:\TRAE_projects\Zephyr-1\Desktop-code\ZephyrDesktop\src\ZephyrDesktop\publish\ZephyrDesktop.exe

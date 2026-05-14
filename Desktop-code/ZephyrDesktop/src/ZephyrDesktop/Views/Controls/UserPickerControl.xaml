@@ -1,0 +1,79 @@
+<UserControl x:Class="ZephyrDesktop.Views.Controls.UserPickerControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root">
+    <Grid>
+        <Border x:Name="TriggerBorder"
+                CornerRadius="6" MinHeight="36"
+                Padding="8,6" BorderBrush="#334155" BorderThickness="1"
+                Cursor="Hand"
+                MouseLeftButtonDown="TriggerBorder_MouseLeftButtonDown">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Background" Value="#1e293b"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#253347"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <WrapPanel Grid.Column="0" x:Name="SelectedUsersPanel" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="0" x:Name="PlaceholderText"
+                           Text="+ 指派给..." FontSize="13" Foreground="#94a3b8"
+                           VerticalAlignment="Center"/>
+                <Path Grid.Column="1" Data="M0,0 L4,4 L8,0"
+                      Stroke="#64748b" StrokeThickness="1.5"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      HorizontalAlignment="Right" VerticalAlignment="Center"
+                      Margin="8,0,2,0"/>
+            </Grid>
+        </Border>
+        <Popup x:Name="DropDownPopup"
+               PlacementTarget="{Binding ElementName=TriggerBorder}"
+               Placement="Bottom" StaysOpen="True"
+               PopupAnimation="Slide" AllowsTransparency="True"
+               Closed="DropDownPopup_Closed">
+            <Border Background="#1e293b" CornerRadius="6" Padding="4" Margin="0,2,0,0"
+                    BorderBrush="#334155" BorderThickness="1"
+                    MinWidth="{Binding ActualWidth, ElementName=TriggerBorder}">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.3"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBox x:Name="SearchBox"
+                             FontSize="13" Padding="6,4" Margin="2,2,2,4"
+                             Background="#0f172a" Foreground="#e2e8f0"
+                             BorderBrush="#334155" BorderThickness="1"
+                             TextChanged="SearchBox_TextChanged"/>
+                    <ItemsControl x:Name="UsersList" MaxHeight="200">
+                        <ItemsControl.Template>
+                            <ControlTemplate>
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <ItemsPresenter/>
+                                </ScrollViewer>
+                            </ControlTemplate>
+                        </ItemsControl.Template>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                          Checked="UserCheckBox_Changed" Unchecked="UserCheckBox_Changed"
+                                          Foreground="#e2e8f0" Cursor="Hand" Margin="4,2">
+                                    <TextBlock Text="{Binding Name}" FontSize="13" Foreground="#e2e8f0"/>
+                                </CheckBox>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock x:Name="EmptyText" Text="暂无用户" FontSize="13"
+                               Foreground="#64748b" HorizontalAlignment="Center"
+                               Margin="0,12" Visibility="Collapsed"/>
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

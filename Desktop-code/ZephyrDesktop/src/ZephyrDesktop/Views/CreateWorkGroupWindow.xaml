@@ -1,0 +1,166 @@
+<Window x:Class="ZephyrDesktop.Views.CreateWorkGroupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:ZephyrDesktop.Views.Controls"
+        Title="创建专项工作组" Height="680" Width="560"
+        WindowStyle="None" AllowsTransparency="True"
+        Background="Transparent" ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen">
+    <Border CornerRadius="12" Background="White">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.15" Color="#000000"/>
+        </Border.Effect>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="44"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Background="#1e40af" CornerRadius="12,12,0,0"
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid>
+                    <TextBlock Text="创建专项工作组" FontSize="14" FontWeight="SemiBold"
+                               Foreground="White" VerticalAlignment="Center" Margin="16,0,0,0"/>
+                    <Button Content="✕" FontSize="12" Width="36" Height="36"
+                            Background="Transparent" Foreground="White" BorderThickness="0"
+                            HorizontalAlignment="Right" Cursor="Hand"
+                            Click="CloseButton_Click">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="BtnBorder" Background="Transparent" CornerRadius="0,12,0,0">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="BtnBorder" Property="Background" Value="#ef4444"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="24,20,24,24">
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock FontSize="13" Foreground="#374151" Margin="0,0,0,4">
+                                <Run Text="工作组名称"/><Run Text=" *" Foreground="#ef4444"/>
+                            </TextBlock>
+                            <TextBox x:Name="NameTextBox"
+                                     FontSize="14" Padding="8,6"
+                                     BorderBrush="#d1d5db" BorderThickness="1"
+                                     Background="#f9fafb" MaxLength="100"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="模板类型" FontSize="13" Foreground="#374151"
+                                       Margin="0,0,0,4"/>
+                            <ComboBox x:Name="TemplateTypeCombo"
+                                      FontSize="14" Padding="8,6"
+                                      BorderBrush="#d1d5db" BorderThickness="1"
+                                      Background="#f9fafb"
+                                      SelectedIndex="0">
+                                <ComboBoxItem Tag="default">日常工作任务</ComboBoxItem>
+                                <ComboBoxItem Tag="data_analysis">数据分析研判</ComboBoxItem>
+                                <ComboBoxItem Tag="special_project">专项行动方案</ComboBoxItem>
+                                <ComboBoxItem Tag="emergency_canvas">紧急协查通报</ComboBoxItem>
+                                <ComboBoxItem Tag="collaborative_writing">协同作战方案</ComboBoxItem>
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="工作要求描述" FontSize="13" Foreground="#374151"
+                               Margin="0,12,0,4"/>
+                    <TextBox x:Name="DescriptionTextBox"
+                             Height="80" TextWrapping="Wrap" AcceptsReturn="True"
+                             FontSize="14" Padding="8,6"
+                             BorderBrush="#d1d5db" BorderThickness="1"
+                             Background="#f9fafb" MaxLength="500"
+                             VerticalScrollBarVisibility="Auto"
+                             Margin="0,0,0,16"/>
+
+                    <TextBlock Text="截止日期" FontSize="13" Foreground="#374151"
+                               Margin="0,0,0,4"/>
+                    <DatePicker x:Name="DueDatePicker"
+                                FontSize="14"
+                                Margin="0,0,0,20"/>
+
+                    <Border BorderBrush="#e5e7eb" BorderThickness="0,1,0,1"
+                            Padding="0,12" Margin="0,4,0,12">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock Text="小组设置" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="#1f2937" VerticalAlignment="Center"/>
+                                <Button Content="+ 添加小组" FontSize="12"
+                                        Foreground="#3B82F6" Background="Transparent"
+                                        BorderThickness="0" Cursor="Hand"
+                                        Padding="8,4" Margin="12,0,0,0"
+                                        Click="AddSubGroupButton_Click"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" x:Name="SubGroupsPanel"/>
+                        </Grid>
+                    </Border>
+
+                    <TextBlock x:Name="ErrorText" Foreground="#ef4444" FontSize="12"
+                               Visibility="Collapsed" Margin="0,4,0,12"
+                               TextWrapping="Wrap"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                                Margin="0,8,0,0">
+                        <Button Content="取消" Width="80" Height="36"
+                                Click="CancelButton_Click"
+                                Background="#f3f4f6" BorderThickness="0"
+                                Cursor="Hand" FontSize="13"
+                                Margin="0,0,12,0">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="BtnBorder" CornerRadius="6"
+                                            Background="#f3f4f6">
+                                        <ContentPresenter HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="BtnBorder"
+                                                    Property="Background" Value="#e5e7eb"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                        <Button Content="一键创建并分发任务" Height="36"
+                                Click="SubmitButton_Click"
+                                Foreground="White" BorderThickness="0"
+                                Cursor="Hand" FontSize="13" Padding="16,0">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="BtnBorder" CornerRadius="6"
+                                            Background="#3B82F6" Padding="16,0">
+                                        <ContentPresenter HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="BtnBorder"
+                                                    Property="Background" Value="#2563eb"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Border>
+</Window>

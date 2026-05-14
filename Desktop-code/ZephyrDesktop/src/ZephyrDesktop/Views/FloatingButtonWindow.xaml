@@ -1,0 +1,91 @@
+<Window x:Class="ZephyrDesktop.Views.FloatingButtonWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="新建任务" Height="56" Width="56"
+        WindowStyle="None" AllowsTransparency="True"
+        Background="Transparent" Topmost="True"
+        ResizeMode="NoResize" ShowInTaskbar="False">
+    <Grid>
+        <Border x:Name="ButtonBorder"
+                CornerRadius="24" Background="#3B82F6"
+                Width="48" Height="48"
+                MouseLeftButtonDown="ButtonBorder_MouseLeftButtonDown"
+                MouseLeftButtonUp="ButtonBorder_MouseLeftButtonUp"
+                MouseMove="ButtonBorder_MouseMove"
+                Cursor="Hand">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.25" Color="#3B82F6"/>
+            </Border.Effect>
+            <TextBlock Text="+" FontSize="28" FontWeight="Bold"
+                       Foreground="White" HorizontalAlignment="Center"
+                       VerticalAlignment="Center" Margin="0,-2,0,0"/>
+        </Border>
+        <Popup x:Name="LeftClickPopup"
+               PlacementTarget="{Binding ElementName=ButtonBorder}"
+               Placement="Left"
+               HorizontalOffset="-8"
+               StaysOpen="False"
+               AllowsTransparency="True">
+            <Border CornerRadius="8" Background="White"
+                    BorderBrush="#E5E7EB" BorderThickness="1"
+                    Padding="4">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.12" Color="Black"/>
+                </Border.Effect>
+                <StackPanel>
+                    <Border x:Name="MenuItemNormalTask"
+                            CornerRadius="4" Padding="12,8"
+                            Background="Transparent" Cursor="Hand"
+                            MouseLeftButtonUp="MenuItemNormalTask_Click"
+                            MouseEnter="MenuItem_MouseEnter"
+                            MouseLeave="MenuItem_MouseLeave">
+                        <TextBlock Text="📋 普通任务" FontSize="13" Foreground="#1F2937"/>
+                    </Border>
+                    <Border x:Name="MenuItemWorkGroup"
+                            CornerRadius="4" Padding="12,8"
+                            Background="Transparent" Cursor="Hand"
+                            MouseLeftButtonUp="MenuItemWorkGroup_Click"
+                            MouseEnter="MenuItem_MouseEnter"
+                            MouseLeave="MenuItem_MouseLeave">
+                        <TextBlock Text="🏢 专项工作组" FontSize="13" Foreground="#1F2937"/>
+                    </Border>
+                    <Border x:Name="MenuItemCreateWorkGroup"
+                            CornerRadius="4" Padding="12,8"
+                            Background="Transparent" Cursor="Hand"
+                            MouseLeftButtonUp="MenuItemCreateWorkGroup_Click"
+                            MouseEnter="MenuItem_MouseEnter"
+                            MouseLeave="MenuItem_MouseLeave">
+                        <TextBlock Text="✨ 创建专项工作" FontSize="13" Foreground="#1F2937"/>
+                    </Border>
+
+                    <Border Height="1" Background="#E5E7EB" Margin="4,4"/>
+
+                    <Border x:Name="MenuItemNoteOverview"
+                            CornerRadius="4" Padding="12,8"
+                            Background="Transparent" Cursor="Hand"
+                            MouseLeftButtonUp="MenuItemNoteOverview_Click"
+                            MouseEnter="MenuItem_MouseEnter"
+                            MouseLeave="MenuItem_MouseLeave">
+                        <TextBlock Text="📊 任务概览" FontSize="13" Foreground="#1F2937"/>
+                    </Border>
+                    <Border x:Name="MenuItemWorkbench"
+                            CornerRadius="4" Padding="12,8"
+                            Background="Transparent" Cursor="Hand"
+                            MouseLeftButtonUp="MenuItemWorkbench_Click"
+                            MouseEnter="MenuItem_MouseEnter"
+                            MouseLeave="MenuItem_MouseLeave">
+                        <TextBlock Text="💼 工作台" FontSize="13" Foreground="#1F2937"/>
+                    </Border>
+                    <Border x:Name="MenuItemToggleNotes"
+                            CornerRadius="4" Padding="12,8"
+                            Background="Transparent" Cursor="Hand"
+                            MouseLeftButtonUp="MenuItemToggleNotes_Click"
+                            MouseEnter="MenuItem_MouseEnter"
+                            MouseLeave="MenuItem_MouseLeave">
+                        <TextBlock x:Name="MenuToggleNotesText" Text="👁 隐藏所有任务" FontSize="13" Foreground="#1F2937"/>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</Window>
