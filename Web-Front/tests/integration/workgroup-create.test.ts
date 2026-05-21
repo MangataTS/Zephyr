@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import type { WorkGroupData } from '@/services/workgroup'
+import type { WorkGroupData, AISuggestGroupsResult } from '@/services/workgroup'
 
 const mockUser = {
   id: 'user-me',
@@ -69,12 +69,41 @@ const mockDeleteWorkGroup = vi.fn(() =>
   Promise.resolve({ data: null })
 )
 
+const mockAiResult: AISuggestGroupsResult = {
+  analysis: '该专项工作需要数据分析能力和现场执行能力，建议分为数据研判组和行动执行组两个小组。',
+  suggested_name: '雷霆2026专项行动',
+  suggested_template: 'special_project',
+  sub_groups: [
+    {
+      name: '数据研判组',
+      responsibility: '负责涉案数据分析与情报研判',
+      members: [
+        { user_id: 'user-1', name: '张三', role: 'leader', reason: '数据分析经验丰富' },
+        { user_id: 'user-2', name: '李四', role: 'member', reason: '情报研判能力强' },
+      ],
+    },
+    {
+      name: '行动执行组',
+      responsibility: '负责现场核查与抓捕执行',
+      members: [
+        { user_id: 'user-3', name: '王五', role: 'leader', reason: '现场指挥经验丰富' },
+      ],
+    },
+  ],
+  source: 'ai',
+}
+
+const mockAiSuggestGroups = vi.fn(() =>
+  Promise.resolve({ data: mockAiResult })
+)
+
 const mockFetchNotes = vi.fn(() => Promise.resolve())
 
 vi.mock('@/services/workgroup', () => ({
   createWorkGroup: (payload: unknown) => mockCreateWorkGroup(payload),
   searchGroups: (query: unknown) => mockSearchGroups(query),
   deleteWorkGroup: (id: string) => mockDeleteWorkGroup(id),
+  aiSuggestGroups: (description: string, groupName?: string) => mockAiSuggestGroups(description, groupName),
 }))
 
 vi.mock('@/services/groupNotes', () => ({
@@ -326,6 +355,166 @@ describe('专项工作组创建流程 - 集成测试', () => {
           ]),
         })
       )
+    })
+  })
+
+  describe('AI智能成组', () => {
+    beforeEach(() => {
+      mockAiSuggestGroups.mockClear()
+    })
+
+    it('openAIMode 应激活AI模式并保留已有描述', async () => {
+      const { default: WorkbenchPage } = await import('@/pages/WorkbenchPage.vue')
+      const wrapper = mount(WorkbenchPage, {
+        global: {
+          stubs: {
+            'router-link': { template: '<a><slot /></a>' },
+            StickyNoteCard: { template: '<div class="note-card" />' },
+          },
+        },
+      })
+
+      wrapper.vm.showWorkGroupModal = true
+      wrapper.vm.wgDescription = '现有工作描述'
+      await wrapper.vm.$nextTick()
+
+      wrapper.vm.openAIMode()
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.vm.aiMode).toBe(true)
+      expect(wrapper.vm.aiDescription).toBe('现有工作描述')
+      expect(wrapper.vm.aiResult).toBeNull()
+      expect(wrapper.vm.aiError).toBe('')
+    })
+
+    it('closeAIMode 应退出AI模式并清空结果', async () => {
+      const { default: WorkbenchPage } = await import('@/pages/WorkbenchPage.vue')
+      const wrapper = mount(WorkbenchPage, {
+        global: {
+          stubs: {
+            'router-link': { template: '<a><slot /></a>' },
+            StickyNoteCard: { template: '<div class="note-card" />' },
+          },
+        },
+      })
+
+      wrapper.vm.showWorkGroupModal = true
+      wrapper.vm.openAIMode()
+      wrapper.vm.aiResult = mockAiResult as AISuggestGroupsResult
+      await wrapper.vm.$nextTick()
+
+      wrapper.vm.closeAIMode()
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.vm.aiMode).toBe(false)
+      expect(wrapper.vm.aiResult).toBeNull()
+      expect(wrapper.vm.aiError).toBe('')
+    })
+
+    it('handleAISuggest 描述不足10字应显示错误', async () => {
+      const { default: WorkbenchPage } = await import('@/pages/WorkbenchPage.vue')
+      const wrapper = mount(WorkbenchPage, {
+        global: {
+          stubs: {
+            'router-link': { template: '<a><slot /></a>' },
+            StickyNoteCard: { template: '<div class="note-card" />' },
+          },
+        },
+      })
+
+      wrapper.vm.showWorkGroupModal = true
+      wrapper.vm.aiMode = true
+      wrapper.vm.aiDescription = '短描述'
+      await wrapper.vm.$nextTick()
+
+      await wrapper.vm.handleAISuggest()
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.vm.aiError).toBe('请至少输入10个字的工作要求描述')
+      expect(mockAiSuggestGroups).not.toHaveBeenCalled()
+    })
+
+    it('handleAISuggest 应成功调用并填充aiResult', async () => {
+      const { default: WorkbenchPage } = await import('@/pages/WorkbenchPage.vue')
+      const wrapper = mount(WorkbenchPage, {
+        global: {
+          stubs: {
+            'router-link': { template: '<a><slot /></a>' },
+            StickyNoteCard: { template: '<div class="note-card" />' },
+          },
+        },
+      })
+
+      wrapper.vm.showWorkGroupModal = true
+      wrapper.vm.aiMode = true
+      wrapper.vm.aiDescription = '针对近期辖区内电信网络诈骗案件高发态势，需成立专项研判打击工作组'
+      await wrapper.vm.$nextTick()
+
+      await wrapper.vm.handleAISuggest()
+      await wrapper.vm.$nextTick()
+
+      expect(mockAiSuggestGroups).toHaveBeenCalledTimes(1)
+      expect(mockAiSuggestGroups).toHaveBeenCalledWith(
+        expect.stringContaining('电信网络诈骗'),
+        ''
+      )
+      expect(wrapper.vm.aiResult).not.toBeNull()
+      expect(wrapper.vm.aiError).toBe('')
+      expect(wrapper.vm.aiSuggesting).toBe(false)
+    })
+
+    it('applyAISuggestion 应将AI结果填充到表单', async () => {
+      const { default: WorkbenchPage } = await import('@/pages/WorkbenchPage.vue')
+      const wrapper = mount(WorkbenchPage, {
+        global: {
+          stubs: {
+            'router-link': { template: '<a><slot /></a>' },
+            StickyNoteCard: { template: '<div class="note-card" />' },
+          },
+        },
+      })
+
+      wrapper.vm.showWorkGroupModal = true
+      wrapper.vm.aiResult = mockAiResult as AISuggestGroupsResult
+      wrapper.vm.aiDescription = '针对近期辖区内电信网络诈骗案件高发态势'
+      await wrapper.vm.$nextTick()
+
+      wrapper.vm.applyAISuggestion()
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.vm.wgName).toBe('雷霆2026专项行动')
+      expect(wrapper.vm.wgTemplate).toBe('special_project')
+      expect(wrapper.vm.wgDescription).toBe('针对近期辖区内电信网络诈骗案件高发态势')
+      expect(wrapper.vm.wgSubGroups.length).toBe(2)
+      expect(wrapper.vm.wgSubGroups[0].name).toBe('数据研判组')
+      expect(wrapper.vm.wgSubGroups[1].name).toBe('行动执行组')
+      expect(wrapper.vm.aiMode).toBe(false)
+      expect(wrapper.vm.aiResult).toBeNull()
+    })
+
+    it('openWGModal 应重置AI状态', async () => {
+      const { default: WorkbenchPage } = await import('@/pages/WorkbenchPage.vue')
+      const wrapper = mount(WorkbenchPage, {
+        global: {
+          stubs: {
+            'router-link': { template: '<a><slot /></a>' },
+            StickyNoteCard: { template: '<div class="note-card" />' },
+          },
+        },
+      })
+
+      wrapper.vm.aiMode = true
+      wrapper.vm.aiDescription = '旧描述'
+      wrapper.vm.aiResult = mockAiResult as AISuggestGroupsResult
+      wrapper.vm.aiError = '旧错误'
+
+      wrapper.vm.openWGModal()
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.vm.aiMode).toBe(false)
+      expect(wrapper.vm.aiDescription).toBe('')
+      expect(wrapper.vm.aiResult).toBeNull()
+      expect(wrapper.vm.aiError).toBe('')
     })
   })
 })

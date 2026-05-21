@@ -1,6 +1,34 @@
 import { get, post, put, del } from './api';
 import type { ApiResponse, PaginatedData } from '@/types/api';
 
+export interface AISuggestedMember {
+  user_id: string;
+  name: string;
+  role: string;
+  reason: string;
+}
+
+export interface AISuggestedGroup {
+  name: string;
+  responsibility: string;
+  members: AISuggestedMember[];
+}
+
+export interface AISuggestGroupsResult {
+  analysis: string;
+  suggested_name: string;
+  suggested_template: string;
+  sub_groups: AISuggestedGroup[];
+  source: string;
+}
+
+export function aiSuggestGroups(
+  description: string,
+  groupName?: string
+): Promise<ApiResponse<AISuggestGroupsResult>> {
+  return post('/api/v1/groups/ai-suggest', { description, group_name: groupName || '' }, { timeout: 190000 });
+}
+
 export interface WorkGroupData {
   id: string;
   name: string;
@@ -119,7 +147,7 @@ export interface GenerateReportResult {
 }
 
 export function generateGroupReport(groupId: string): Promise<ApiResponse<GenerateReportResult>> {
-  return post(`/api/v1/groups/${groupId}/reports`)
+  return post(`/api/v1/groups/${groupId}/reports`, undefined, { timeout: 190000 })
 }
 
 export function listGroupReports(

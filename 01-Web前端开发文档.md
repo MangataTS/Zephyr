@@ -135,12 +135,18 @@ Web-Front/src/
 - 搜索栏：关键词（ILIKE）、日期范围（date_from / date_to）组合筛选，Enter 触发搜索
 - 专项行动列表：卡片式，展示标题/状态/模板类型/发起人/成员/截止时间，点击进入详情页
 - 「一键创建」按钮：弹出模态框 → 填写名称/模板/描述/截止日期 → 多小组设置（每小组独立 UserPicker）→ 一键创建工作组并自动为每位成员创建任务任务
+- **「🤖 AI智能成组」按钮**（紫蓝渐变样式）：
+  - 点击后展开 AI 交互面板，包含工作要求描述输入区（≥10字符），带示例提示
+  - 「开始AI智能分析」按钮触发后端 AI 建议请求，展示加载动画
+  - AI 返回后展示分析说明、建议组名/模板类型、多小组卡片（每组含组长/组员标签及推荐理由）
+  - 「✅ 采纳此方案」一键将 AI 推荐结果回填至创建表单，自动填充名称/模板/描述/小组配置
+  - 支持随时关闭 AI 面板回到手动创建模式
 
 **任务 Tab（全部/待办/指派/盯办/已完成）**：
 
 - 任务墙：`grid-cols-[repeat(auto-fill,minmax(280px,1fr))]` 自适应网格
 - 点击任务 → 右侧滑出详情面板（编辑标题/内容/查看标签/完成归档/盯办）
-- 悬浮 FAB 按钮 → 弹窗创建任务（标题/内容/标签/类型/指派人员）
+- 悬浮 FAB 按钮 → 弹窗创建任务（标题/二级标题/内容/标签/类型/指派人员）
   - 「指派他人」模式下支持选择工作类型，「一键推荐」基于历史参与数据智能推荐合适人员
 - **辅助模块**：为不同的业务场景提供了各自独立的管理页面：
   - **[WorkbenchPage]** 便签 + 任务云端管理，团队任务统筹分发
@@ -151,7 +157,7 @@ Web-Front/src/
 
 - 顶部信息栏：状态/模板/发起人/成员数/截止时间 → 成员按 `sub_group_name` 分组卡片展示
 - **专属任务区**：仅展示 `group_id = 当前工作组` 的任务，以 `StickyNoteCard` 卡片形式呈现在自适应网格中
-- 新建任务弹窗：支持选择负责人（从工作组成员中选）、截止日期、标签（TagSelector）
+- 新建任务弹窗：支持输入二级标题（子标签）、选择负责人（从工作组成员中选）、截止日期、标签（TagSelector）
 - 点击任务卡片 → 右侧滑出详情面板（编辑/归档/盯办）
 - 所有表单使用 `@keydown.enter.prevent` 防止误提交
 
@@ -175,10 +181,14 @@ Web-Front/src/
 - 时间切换：近一周 / 近一月 / 近一季
 - 最新动态：垂直时间轴，按操作类型着色
 
-### 5.5 AnalyticsPage — 工作成效分析
+### 5.5 AnalyticsPage — 工作成效分析（★ AI 增强）
 
 - 数据统计 Tab：个人统计面板（创建/完成/完成率/盯办/趋势/标签分布）
-- 报告历史 Tab：AI 生成的报告列表
+- **AI 报告生成按钮组**：顶部操作栏提供「今日日报」「本周周报」「本月月报」三个按钮，点击后调用后端 AI 报告生成接口，展示加载动画，生成成功后自动刷新报告列表
+  - 黄色「今日日报」：统计今日工作数据，AI 分析后生成日报
+  - 蓝色「本周周报」：统计本周工作数据，AI 分析后生成周报
+  - 紫色「本月月报」：统计本月工作数据，AI 分析后生成月报
+- 报告历史 Tab：AI 生成的报告列表，标注 `report_type`（`ai` 或 `template`）
 - 「📝 编辑模板」按钮：Markdown 模板编辑器，支持变量占位符（如 `{{userName}}`、`{{completionRate}}`），变量高亮显示
 
 ### 5.6 TemplatesPage — 模板库管理（★ 用户自定义模板）
@@ -208,6 +218,7 @@ Web-Front/src/
   - 绿色（已完成）：`#DCFCE7` 底色
 - **内容展开**：超过 100 字显示"展开全文"
 - **标签展示**：最多 2 个胶囊，超出显示 `+N`；`tags` 为 `undefined` 时安全降级
+- **二级标题**：卡片标题下方显示 `sub_tag` 子标签分类标记，`text-xs text-slate-400` 单行截断
 
 ### 6.2 TagSelector
 
@@ -246,9 +257,9 @@ Web-Front/src/
 | `notes.ts`      | `fetchNotes / createNote / updateNote / completeNote / remindNote / deleteNote / restoreNote / fetchNoteStats / exportNotes / fetchHeatmap` | 任务 CRUD + 统计 + 热力图 |
 | `tags.ts`       | `fetchTags / createTag / updateTag / deleteTag`                                                                              | 标签管理               |
 | `templates.ts`  | `fetchTemplates / fetchTemplateById / createTemplate / updateTemplate / deleteTemplate`                                      | ★ 模板管理 CRUD        |
-| `workgroup.ts`  | `searchGroups / getMyGroups / getWorkGroupDetail / createWorkGroup / deleteWorkGroup / getWorkGroupMembers`                  | 工作组 CRUD + 搜索     |
+| `workgroup.ts`  | `searchGroups / getMyGroups / getWorkGroupDetail / createWorkGroup / deleteWorkGroup / getWorkGroupMembers / aiSuggestGroups` | 工作组 CRUD + 搜索 + AI智能成组 |
 | `groupNotes.ts` | `getGroupNotes / createGroupNote`                                                                                            | 专属任务               |
-| `analytics.ts`  | `fetchPersonalStats / generateAIReport / fetchReports / fetchReportTemplate / saveReportTemplate`                            | 分析+报告模板          |
+| `analytics.ts`  | `fetchPersonalStats / generateDailyReport / generateWeeklyReport / generateMonthlyReport / generateAIReport / fetchReports / fetchReportTemplate / saveReportTemplate` | 分析+AI报告生成+报告模板 |
 | `system.ts`     | `fetchConfig / updateConfig / fetchOperations`                                                                               | 系统配置+日志          |
 
 ---

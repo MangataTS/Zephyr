@@ -3,6 +3,9 @@ import { ref, computed, onMounted } from 'vue';
 import {
   fetchPersonalStats,
   generateAIReport,
+  generateDailyReport,
+  generateWeeklyReport,
+  generateMonthlyReport,
   listReports,
   deleteReport,
   fetchReportTemplate,
@@ -104,6 +107,37 @@ async function handleGenerateReport() {
     loadReports();
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'AI报告生成失败';
+    reportError.value = msg;
+    showToast('error', msg);
+  } finally {
+    reportLoading.value = false;
+  }
+}
+
+const currentReportPeriod = ref<'day' | 'week' | 'month'>('week');
+
+async function handleGeneratePeriodReport(period: 'day' | 'week' | 'month') {
+  reportLoading.value = true;
+  reportError.value = '';
+  reportContent.value = '';
+  currentReportPeriod.value = period;
+  try {
+    let res: { data: unknown };
+    if (period === 'day') {
+      res = await generateDailyReport();
+    } else if (period === 'week') {
+      res = await generateWeeklyReport();
+    } else {
+      res = await generateMonthlyReport();
+    }
+    const data = res.data as { report: string; report_type: string; period_label: string };
+    reportContent.value = data.report || '';
+    reportType.value = data.report_type || '';
+    reportGenerated.value = true;
+    showToast('success', `${data.period_label || ''}报告生成成功，已保存到历史记录`);
+    loadReports();
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : '报告生成失败';
     reportError.value = msg;
     showToast('error', msg);
   } finally {
@@ -487,11 +521,38 @@ onMounted(() => {
                   🤖 AI 智能报告
                 </h3>
                 <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                  基于当前统计数据自动生成结构化工作报告
+                  选择日报/周报/月报快速生成，或按周期生成综合分析报告
                   <span class="text-blue-500">（无AI配置时自动使用模板生成）</span>
                 </p>
               </div>
               <div class="flex items-center gap-2">
+                <button
+                  v-if="!reportGenerated"
+                  class="px-3 py-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-smooth disabled:opacity-50 border border-blue-200 dark:border-blue-800"
+                  :disabled="reportLoading"
+                  @click="handleGeneratePeriodReport('day')"
+                  title="生成今日工作成效报告"
+                >
+                  📅 日报
+                </button>
+                <button
+                  v-if="!reportGenerated"
+                  class="px-3 py-2 text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 rounded-lg transition-smooth disabled:opacity-50 border border-purple-200 dark:border-purple-800"
+                  :disabled="reportLoading"
+                  @click="handleGeneratePeriodReport('week')"
+                  title="生成本周工作成效报告"
+                >
+                  📆 周报
+                </button>
+                <button
+                  v-if="!reportGenerated"
+                  class="px-3 py-2 text-xs font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 hover:bg-teal-100 dark:hover:bg-teal-900/50 rounded-lg transition-smooth disabled:opacity-50 border border-teal-200 dark:border-teal-800"
+                  :disabled="reportLoading"
+                  @click="handleGeneratePeriodReport('month')"
+                  title="生成本月工作成效报告"
+                >
+                  📊 月报
+                </button>
                 <button
                   v-if="!reportGenerated"
                   class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 rounded-lg transition-smooth disabled:opacity-50 flex items-center gap-2"

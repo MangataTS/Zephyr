@@ -1,0 +1,164 @@
+{
+  "_说明": "================================================================",
+  "_说明2": "  轻燕工作台 服务端配置文件",
+  "_说明3": "  按功能模块分组，所有敏感信息统一管理",
+  "_说明4": "  支持环境变量覆盖（环境变量名 = LABELPRO_ + 路径，如 LABELPRO_SERVER_PORT）",
+  "_说明5": "================================================================",
+
+  "server": {
+    "_模块": "HTTP服务器配置",
+    "port": 8090,
+    "host": "0.0.0.0",
+    "mode": "debug",
+    "_mode说明": "debug | release | test",
+    "read_timeout_seconds": 30,
+    "write_timeout_seconds": 200,
+    "max_request_body_mb": 10
+  },
+
+  "database": {
+    "_模块": "PostgreSQL数据库配置",
+    "host": "127.0.0.1",
+    "port": 5432,
+    "user": "postgres",
+    "password": "1234abcd",
+    "dbname": "labelpro",
+    "sslmode": "disable",
+    "_sslmode说明": "disable | require | verify-ca | verify-full",
+    "max_open_conns": 50,
+    "max_idle_conns": 10,
+    "conn_max_lifetime_seconds": 3600,
+    "log_level": "warn",
+    "_log_level说明": "silent | error | warn | info"
+  },
+
+  "redis": {
+    "_模块": "Redis缓存配置",
+    "host": "127.0.0.1",
+    "port": 6379,
+    "password": "1234abcd",
+    "db": 0,
+    "pool_size": 20,
+    "min_idle_conns": 5,
+    "dial_timeout_seconds": 5,
+    "read_timeout_seconds": 3,
+    "write_timeout_seconds": 3
+  },
+
+  "jwt": {
+    "_模块": "JWT认证配置",
+    "_算法": "RS256（RSA非对称加密）",
+    "private_key_path": "./keys/private.pem",
+    "public_key_path": "./keys/public.pem",
+    "access_token_expire_seconds": 7200,
+    "_access_token_expire说明": "Access Token有效期，默认2小时(7200秒)",
+    "refresh_token_expire_seconds": 604800,
+    "_refresh_token_expire说明": "Refresh Token有效期，默认7天(604800秒)",
+    "issuer": "labelpro-server",
+    "_密钥生成命令": "openssl genrsa -out private.pem 2048 && openssl rsa -in private.pem -pubout -out public.pem"
+  },
+
+  "log": {
+    "_模块": "日志配置",
+    "level": "debug",
+    "_level说明": "debug | info | warn | error",
+    "format": "json",
+    "_format说明": "json | console",
+    "output_dir": "./logs",
+    "max_size_mb": 100,
+    "_max_size说明": "单个日志文件最大大小(MB)",
+    "max_backups": 30,
+    "_max_backups说明": "最多保留的旧日志文件数",
+    "max_age_days": 30,
+    "_max_age说明": "旧日志文件最长保留天数",
+    "compress": true,
+    "_compress说明": "是否压缩旧日志文件",
+    "enable_console": true,
+    "_enable_console说明": "是否同时输出到控制台"
+  },
+
+  "storage": {
+    "_模块": "文件存储配置",
+    "type": "local",
+    "_type说明": "local | minio",
+    "local_path": "./uploads",
+    "max_file_size_mb": 10,
+    "allowed_extensions": ["doc", "docx", "xls", "xlsx", "pdf", "png", "jpg", "jpeg"],
+    "allowed_mime_types": [
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/pdf",
+      "image/png",
+      "image/jpeg"
+    ],
+    "minio": {
+      "_说明": "仅当 type=minio 时生效",
+      "endpoint": "127.0.0.1:9000",
+      "access_key": "",
+      "secret_key": "",
+      "bucket": "labelpro",
+      "use_ssl": false
+    }
+  },
+
+  "websocket": {
+    "_模块": "WebSocket实时通信配置",
+    "enabled": true,
+    "heartbeat_interval_seconds": 30,
+    "max_connections_per_user": 5,
+    "canvas_sync_throttle_ms": 100,
+    "_throttle说明": "画布同步节流间隔(毫秒)"
+  },
+
+  "rate_limit": {
+    "_模块": "接口限流配置",
+    "enabled": true,
+    "login_per_minute": 200,
+    "_login说明": "登录接口每分钟限制次数",
+    "api_per_minute": 1000,
+    "_api说明": "普通API每分钟限制次数",
+    "ban_duration_seconds": 60,
+    "_ban说明": "触发限流后封禁时长(秒)"
+  },
+
+  "security": {
+    "_模块": "安全配置",
+    "bcrypt_cost": 12,
+    "_bcrypt说明": "bcrypt加密强度(4-31)，建议12",
+    "password_min_length": 8,
+    "password_require_upper": true,
+    "password_require_lower": true,
+    "password_require_digit": true,
+    "password_require_special": true,
+    "max_login_attempts": 5,
+    "login_lockout_minutes": 15,
+    "cors_allowed_origins": ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:3000", "http://127.0.0.1:80"],
+    "_cors说明": "部署时需替换为实际访问地址，内网部署示例: [\"http://192.168.1.100\", \"http://labelpro.internal\"]",
+    "enable_csrf": false
+  },
+
+  "scheduler": {
+    "_模块": "定时任务配置",
+    "auto_remind_enabled": true,
+    "_auto_remind说明": "是否启用自动盯办（到期前2小时）",
+    "auto_remind_interval_minutes": 10,
+    "_auto_remind_interval说明": "自动盯办扫描间隔(分钟)",
+    "auto_archive_enabled": false,
+    "_auto_archive说明": "是否启用到期自动归档",
+    "export_task_timeout_seconds": 300
+  },
+
+  "features": {
+    "_模块": "功能开关",
+    "sms_notification": false,
+    "_sms说明": "短信通知（需额外集成）",
+    "dingtalk_notification": false,
+    "_dingtalk说明": "钉钉通知（需额外集成）",
+    "wechat_work_notification": false,
+    "_wechat_work说明": "企业微信通知（需额外集成）",
+    "demo_mode": false,
+    "_demo_mode说明": "演示模式（跳过认证，使用预置数据）"
+  }
+}

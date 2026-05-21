@@ -1,5 +1,5 @@
 import { get, post, put, del } from './api'
-import type { User, Department, LoginCredentials, LoginResponse, TreeNode, UserProfile, WorkTypeOption } from '@/types'
+import type { User, Department, LoginCredentials, LoginResponse, UserProfile, WorkTypeOption } from '@/types'
 
 export function login(credentials: LoginCredentials) {
   return post<LoginResponse>('/api/v1/auth/login', credentials)
@@ -11,7 +11,7 @@ export function getCurrentUser() {
 
 // ---- Departments ----
 export function getDepartments(flat?: boolean) {
-  return get<TreeNode[]>('/api/v1/departments', { flat: flat ? 'true' : 'false' })
+  return get<Department[]>('/api/v1/departments', { flat: flat ? 'true' : 'false' })
 }
 
 export function createDepartment(payload: { name: string; parent_id?: string; level?: number }) {

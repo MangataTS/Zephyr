@@ -151,7 +151,8 @@ func Setup(cfg *config.Config) *gin.Engine {
 		{
 			groups.GET("", groupHandler.Search)
 			groups.GET("/mine", groupHandler.MyGroups)
-			groups.POST("", groupHandler.Create)
+	groups.POST("/ai-suggest", groupHandler.AISuggestGroups)
+	groups.POST("", groupHandler.Create)
 			groups.GET("/:id", groupHandler.GetDetail)
 			groups.DELETE("/:id", groupHandler.Delete)
 			groups.GET("/:id/members", groupHandler.GetMembers)

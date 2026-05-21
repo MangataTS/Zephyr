@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { AxiosRequestConfig } from 'axios';
 import type { ApiResponse } from '@/types';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
@@ -68,24 +69,36 @@ api.interceptors.response.use(
 
 export async function get<T>(
   url: string,
-  params?: Record<string, unknown>
+  params?: Record<string, unknown>,
+  config?: AxiosRequestConfig
 ): Promise<ApiResponse<T>> {
-  const response = await api.get<ApiResponse<T>>(url, { params });
+  const response = await api.get<ApiResponse<T>>(url, { params, ...config });
   return response.data;
 }
 
-export async function post<T>(url: string, data?: unknown): Promise<ApiResponse<T>> {
-  const response = await api.post<ApiResponse<T>>(url, data);
+export async function post<T>(
+  url: string,
+  data?: unknown,
+  config?: AxiosRequestConfig
+): Promise<ApiResponse<T>> {
+  const response = await api.post<ApiResponse<T>>(url, data, config);
   return response.data;
 }
 
-export async function put<T>(url: string, data?: unknown): Promise<ApiResponse<T>> {
-  const response = await api.put<ApiResponse<T>>(url, data);
+export async function put<T>(
+  url: string,
+  data?: unknown,
+  config?: AxiosRequestConfig
+): Promise<ApiResponse<T>> {
+  const response = await api.put<ApiResponse<T>>(url, data, config);
   return response.data;
 }
 
-export async function del<T>(url: string): Promise<ApiResponse<T>> {
-  const response = await api.delete<ApiResponse<T>>(url);
+export async function del<T>(
+  url: string,
+  config?: AxiosRequestConfig
+): Promise<ApiResponse<T>> {
+  const response = await api.delete<ApiResponse<T>>(url, config);
   return response.data;
 }
 

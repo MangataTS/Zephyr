@@ -42,12 +42,26 @@ export interface ReportListQuery {
   date_to?: string
 }
 
+const AI_REQUEST_TIMEOUT = 190000
+
 export function fetchPersonalStats(period: 'week' | 'month' | 'year'): Promise<ApiResponse<PersonalStatsData>> {
   return get('/api/v1/analytics/personal-stats', { period })
 }
 
 export function generateAIReport(period: 'week' | 'month' | 'year'): Promise<ApiResponse<AIReportData>> {
-  return post('/api/v1/analytics/ai-report', { period })
+  return post('/api/v1/analytics/ai-report', { period }, { timeout: AI_REQUEST_TIMEOUT })
+}
+
+export function generateDailyReport(): Promise<ApiResponse<AIReportData>> {
+  return post('/api/v1/analytics/daily-report', undefined, { timeout: AI_REQUEST_TIMEOUT })
+}
+
+export function generateWeeklyReport(): Promise<ApiResponse<AIReportData>> {
+  return post('/api/v1/analytics/weekly-report', undefined, { timeout: AI_REQUEST_TIMEOUT })
+}
+
+export function generateMonthlyReport(): Promise<ApiResponse<AIReportData>> {
+  return post('/api/v1/analytics/monthly-report', undefined, { timeout: AI_REQUEST_TIMEOUT })
 }
 
 export function listReports(query: ReportListQuery): Promise<ApiResponse<PaginatedData<WorkReportItem>>> {

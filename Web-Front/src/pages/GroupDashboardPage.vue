@@ -23,8 +23,16 @@ async function loadDashboard() {
   try {
     const res = await getGroupDashboard(groupId);
     data.value = res.data as unknown as DashboardData;
-  } catch {
-    /* ignore */
+    error.value = '';
+  } catch (e: unknown) {
+    const err = e as Error;
+    if (err.message?.includes('403')) {
+      error.value = '您不是该工作组成员，无权访问协作大屏';
+    } else if (err.message?.includes('404')) {
+      error.value = '工作组不存在或已被删除';
+    } else {
+      error.value = '数据加载失败，请检查网络后重试';
+    }
   } finally {
     if (mounted) loading.value = false;
   }

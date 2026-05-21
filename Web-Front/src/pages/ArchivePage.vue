@@ -84,9 +84,9 @@ function groupNotesByMonth(notes: Note[]) {
       class="bg-white dark:bg-slate-800 rounded-card p-4 mb-6 flex flex-wrap items-center gap-3 border border-slate-100 dark:border-slate-700 transition-colors duration-300"
     >
       <div class="flex items-center gap-2">
-        <input v-model="dateFrom" type="date" class="input-field !w-auto" />
+        <input v-model="dateFrom" name="date_from" type="date" class="input-field !w-auto" />
         <span class="text-slate-400 text-sm">至</span>
-        <input v-model="dateTo" type="date" class="input-field !w-auto" />
+        <input v-model="dateTo" name="date_to" type="date" class="input-field !w-auto" />
       </div>
       <input
         v-model="keyword"

@@ -185,7 +185,7 @@ function timeAgo(ts: string): string {
       <div class="flex items-center gap-6">
         <div
           class="text-2xl font-bold tabular-nums text-slate-800"
-          style="font-family: 'JetBrains Mono', 'Inter', monospace"
+          style="font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace"
         >
           {{ formatTime(currentTime) }}
         </div>
@@ -234,7 +234,7 @@ function timeAgo(ts: string): string {
             <span class="text-slate-400 text-xs mb-2 tracking-wider uppercase">任务总数</span>
             <span
               class="text-4xl font-bold text-slate-900 tabular-nums"
-              style="font-family: 'JetBrains Mono', 'Inter', monospace"
+              style="font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace"
               >{{ fmtNum(totalNotes) }}</span
             >
             <span class="text-blue-500 text-xs mt-1 font-medium">系统累计</span>
@@ -250,7 +250,7 @@ function timeAgo(ts: string): string {
             <span class="text-slate-400 text-xs mb-2 tracking-wider uppercase">活跃任务</span>
             <span
               class="text-4xl font-bold text-slate-900 tabular-nums"
-              style="font-family: 'JetBrains Mono', 'Inter', monospace"
+              style="font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace"
               >{{ fmtNum(activeNotes) }}</span
             >
             <span class="text-green-500 text-xs mt-1 font-medium">进行中</span>
@@ -266,7 +266,7 @@ function timeAgo(ts: string): string {
             <span class="text-slate-400 text-xs mb-2 tracking-wider uppercase">归档任务</span>
             <span
               class="text-4xl font-bold text-slate-900 tabular-nums"
-              style="font-family: 'JetBrains Mono', 'Inter', monospace"
+              style="font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace"
               >{{ fmtNum(totalNotes - activeNotes) }}</span
             >
             <span class="text-purple-500 text-xs mt-1 font-medium">已完成 & 已归档</span>
@@ -282,7 +282,7 @@ function timeAgo(ts: string): string {
             <span class="text-slate-400 text-xs mb-2 tracking-wider uppercase">人员总数</span>
             <span
               class="text-4xl font-bold text-slate-900 tabular-nums"
-              style="font-family: 'JetBrains Mono', 'Inter', monospace"
+              style="font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace"
               >{{ fmtNum(staffCount) }}</span
             >
             <span class="text-amber-500 text-xs mt-1 font-medium">全部门在职</span>

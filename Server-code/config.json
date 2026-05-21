@@ -12,7 +12,7 @@
     "mode": "debug",
     "_mode说明": "debug | release | test",
     "read_timeout_seconds": 30,
-    "write_timeout_seconds": 30,
+    "write_timeout_seconds": 200,
     "max_request_body_mb": 10
   },
 

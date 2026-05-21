@@ -27,7 +27,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['"Inter"', '"Noto Sans SC"', '-apple-system', 'sans-serif'],
+        sans: ['-apple-system', 'BlinkMacSystemFont', '"Microsoft YaHei"', '"PingFang SC"', '"Hiragino Sans GB"', 'sans-serif'],
       },
       borderRadius: {
         'card': '16px',

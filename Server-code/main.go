@@ -52,6 +52,9 @@ func main() {
 	}
 	defer database.ClosePostgres()
 
+	if tx := database.DB.Exec("CREATE EXTENSION IF NOT EXISTS pgcrypto"); tx.Error != nil {
+		logger.Fatal("Failed to create pgcrypto extension (required for gen_random_uuid on PostgreSQL < 13)", zap.Error(tx.Error))
+	}
 	if err := database.DB.AutoMigrate(
 		&models.User{},
 		&models.Department{},
@@ -120,6 +123,8 @@ func main() {
 *本报告由系统自动生成，基于实际工作数据统计分析*`,
 	})
 
+	seedDefaultAdmin(cfg)
+
 	if err := database.InitRedis(cfg); err != nil {
 		logger.Warn("Failed to connect to Redis, continuing without cache", zap.Error(err))
 	}
@@ -159,4 +164,36 @@ func main() {
 	}
 
 	logger.Info("Server exited")
+}
+
+func seedDefaultAdmin(cfg *config.Config) {
+	var count int64
+	if err := database.DB.Model(&models.User{}).Count(&count).Error; err != nil {
+		logger.Warn("Failed to check user count, skipping default admin creation", zap.Error(err))
+		return
+	}
+	if count > 0 {
+		logger.Info("Database already has users, skipping default admin creation")
+		return
+	}
+
+	hash, err := utils.HashPassword("admin")
+	if err != nil {
+		logger.Error("Failed to hash default admin password", zap.Error(err))
+		return
+	}
+
+	admin := models.User{
+		Username:     "admin",
+		Name:         "管理员",
+		Role:         "super_admin",
+		PasswordHash: hash,
+		IsActive:     true,
+	}
+	if err := database.DB.Create(&admin).Error; err != nil {
+		logger.Error("Failed to create default admin user", zap.Error(err))
+		return
+	}
+
+	logger.Info("Default admin user created", zap.String("username", "admin"))
 }

@@ -41,6 +41,7 @@ const error = ref('');
 
 const showNoteModal = ref(false);
 const noteTitle = ref('');
+const noteSubTag = ref('');
 const noteContent = ref('');
 const noteOwnerId = ref('');
 const noteDueDate = ref('');
@@ -51,6 +52,7 @@ const noteError = ref('');
 const showDetailPanel = ref(false);
 const selectedDetailNote = ref<Note | null>(null);
 const editingTitle = ref('');
+const editingSubTag = ref('');
 const editingContent = ref('');
 const saving = ref(false);
 const completing = ref(false);
@@ -171,6 +173,7 @@ async function handleDeleteGroup() {
 
 function openNoteModal() {
   noteTitle.value = '';
+  noteSubTag.value = '';
   noteContent.value = '';
   noteOwnerId.value = '';
   noteDueDate.value = '';
@@ -188,6 +191,7 @@ async function handleCreateNote() {
   try {
     const note = await createGroupNote(groupId, {
       title: noteTitle.value.trim(),
+      sub_tag: noteSubTag.value.trim(),
       content: noteContent.value,
       owner_id: noteOwnerId.value || undefined,
       due_time: noteDueDate.value ? new Date(noteDueDate.value).toISOString() : undefined,
@@ -209,6 +213,7 @@ function openDetail(note: Note) {
   if (selectedDetailNote.value?.id) sendIdle(selectedDetailNote.value.id);
   selectedDetailNote.value = note;
   editingTitle.value = note.title || '';
+  editingSubTag.value = note.sub_tag || '';
   editingContent.value = note.content || '';
   selectedEditingTagIds.value = (note.tags || []).map((t) => t.id);
   tagError.value = '';
@@ -226,8 +231,9 @@ async function handleSaveDetail() {
   const noteId = selectedDetailNote.value.id;
   saving.value = true;
   try {
-    await updateNote(noteId, {
+    await updateNote(selectedDetailNote.value.id, {
       title: editingTitle.value.trim(),
+      sub_tag: editingSubTag.value.trim(),
       content: editingContent.value,
       tags: selectedEditingTagIds.value,
     });
@@ -689,7 +695,8 @@ async function handleRemoveMember(m: WorkGroupMemberData) {
               </button>
             </div>
             <form class="space-y-4" @submit.prevent="handleCreateNote" @keydown.enter.prevent>
-              <input v-model="noteTitle" class="input-field" placeholder="任务标题" autofocus />
+              <input v-model="noteTitle" name="title" class="input-field" placeholder="任务标题" autofocus />
+              <input v-model="noteSubTag" name="sub_tag" class="input-field" placeholder="二级标题 / 子标签（可选）" />
               <textarea
                 v-model="noteContent"
                 class="input-field h-24 resize-none"
@@ -779,7 +786,15 @@ async function handleRemoveMember(m: WorkGroupMemberData) {
             <div class="flex-1 overflow-auto space-y-5">
               <div>
                 <span class="text-xs text-slate-400 mb-1 block">标题</span
-                ><input v-model="editingTitle" class="input-field text-base font-semibold" />
+                ><input v-model="editingTitle" name="title" class="input-field text-base font-semibold" />
+              </div>
+              <div>
+                <span class="text-xs text-slate-400 mb-1 block">二级标题 / 子标签</span
+                ><input
+                  v-model="editingSubTag"
+                  class="input-field"
+                  placeholder="二级标题（可选）"
+                />
               </div>
               <div>
                 <span class="text-xs text-slate-400 mb-1 block">内容</span

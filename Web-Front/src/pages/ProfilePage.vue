@@ -367,7 +367,7 @@ async function handleSaveProfile() {
           <form @submit.prevent="handleSaveProfile" class="space-y-3">
             <div>
               <span class="text-xs text-slate-400 dark:text-slate-500 mb-1 block">姓名</span>
-              <input v-model="editName" class="input-field !py-1.5 !text-sm" placeholder="姓名" />
+              <input v-model="editName" name="name" class="input-field !py-1.5 !text-sm" placeholder="姓名" />
             </div>
             <div>
               <span class="text-xs text-slate-400 dark:text-slate-500 mb-1 block">部门</span>
@@ -395,7 +395,7 @@ async function handleSaveProfile() {
             </div>
             <div>
               <span class="text-xs text-slate-400 dark:text-slate-500 mb-1 block">邮箱</span>
-              <input v-model="editEmail" class="input-field !py-1.5 !text-sm" placeholder="邮箱" />
+              <input v-model="editEmail" name="email" class="input-field !py-1.5 !text-sm" placeholder="邮箱" />
             </div>
             <div>
               <span class="text-xs text-slate-400 dark:text-slate-500 mb-1 block">角色</span>

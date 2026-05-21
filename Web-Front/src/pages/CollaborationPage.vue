@@ -55,6 +55,15 @@ function getStatusClass(status: string) {
       </div>
     </div>
 
+    <!-- 错误提示 -->
+    <div v-if="collabStore.loadError && !isProjection" class="mb-4 px-4 py-2.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
+      <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      {{ collabStore.loadError }}
+      <button class="ml-auto text-xs underline hover:text-red-700" @click="collabStore.joinRoom(roomId)">重试</button>
+    </div>
+
     <!-- 协同画布 -->
     <div
       :class="[
@@ -91,12 +100,24 @@ function getStatusClass(status: string) {
         <!-- 编辑区 -->
         <div
           :class="[
-            'flex-1 p-4 text-sm overflow-auto',
+            'flex-1 p-4 text-sm overflow-auto whitespace-pre-wrap',
             isProjection ? 'text-slate-200 placeholder-slate-500' : 'text-slate-700 placeholder-slate-400'
           ]"
-          contenteditable="false"
         >
-          <p class="text-slate-400 italic text-xs">— 等待连接中 —</p>
+          <template v-if="collabStore.syncStatus === 'connecting'">
+            <div class="flex items-center justify-center h-full">
+              <div class="flex flex-col items-center gap-2">
+                <div class="w-6 h-6 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
+                <span class="text-xs text-slate-400">连接中...</span>
+              </div>
+            </div>
+          </template>
+          <template v-else>
+            <template v-if="collabStore.canvasData[col]">
+              {{ collabStore.canvasData[col] }}
+            </template>
+            <p v-else class="text-slate-400 italic text-xs">— 等待同步 —</p>
+          </template>
         </div>
       </div>
     </div>
@@ -110,7 +131,7 @@ function getStatusClass(status: string) {
     >
       <span class="text-xs text-slate-400">{{ collabStore.typingStatusText || '—' }}</span>
       <div class="flex items-center gap-3">
-        <input class="input-field !w-64" placeholder="领导下发指令..." />
+        <input name="command" class="input-field !w-64" placeholder="领导下发指令..." />
         <button class="btn-primary text-xs !py-1.5">下发指令</button>
       </div>
     </div>

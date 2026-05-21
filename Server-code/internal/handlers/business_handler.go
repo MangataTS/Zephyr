@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"labelpro-server/internal/logger"
 	"labelpro-server/internal/middleware"
 	"labelpro-server/internal/models"
 	"labelpro-server/internal/repository"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type TemplateHandler struct {
@@ -654,8 +656,12 @@ func (h *WorkGroupHandler) GetDashboard(c *gin.Context) {
 		if note.CompletedAt != nil {
 			completedAt = note.CompletedAt.Format("01-02 15:04")
 		}
+		userName := "未知用户"
+		if note.Owner != nil {
+			userName = note.Owner.Name
+		}
 		item := DashboardItem{
-			UserName:    note.Owner.Name,
+			UserName:    userName,
 			NoteID:      note.ID.String(),
 			NoteTitle:   note.Title,
 			NoteContent: note.Content,
@@ -774,7 +780,7 @@ func (h *WorkGroupHandler) GenerateReport(c *gin.Context) {
 				activeModel = "gpt-3.5-turbo"
 			}
 			prompt := buildGroupReportPrompt(group.Name, memberNames, totalNotes, completedCount, noteList)
-			aiReport, aiErr := callAIService(activeEndpoint, activeAPIKey, activeModel, prompt)
+			aiReport, aiErr := callAIService(activeEndpoint, activeAPIKey, activeModel, prompt, 4096)
 			if aiErr == nil {
 				reportContent = aiReport
 				reportType = "ai"
@@ -916,6 +922,338 @@ func (h *WorkGroupHandler) ExportReport(c *gin.Context) {
 		c.Header("Content-Type", "text/html; charset=utf-8")
 		c.String(200, doc)
 	}
+}
+
+type AISuggestGroupsReq struct {
+	Description string `json:"description" binding:"required"`
+	GroupName   string `json:"group_name"`
+}
+
+type AISuggestedMember struct {
+	UserID string `json:"user_id"`
+	Name   string `json:"name"`
+	Role   string `json:"role"`
+	Reason string `json:"reason"`
+}
+
+type AISuggestedGroup struct {
+	Name           string              `json:"name"`
+	Responsibility string              `json:"responsibility"`
+	Members        []AISuggestedMember `json:"members"`
+}
+
+type AISuggestGroupsResult struct {
+	Analysis          string             `json:"analysis"`
+	SuggestedName     string             `json:"suggested_name"`
+	SuggestedTemplate string             `json:"suggested_template"`
+	SubGroups         []AISuggestedGroup `json:"sub_groups"`
+	Source            string             `json:"source"`
+}
+
+func (h *WorkGroupHandler) AISuggestGroups(c *gin.Context) {
+	var req AISuggestGroupsReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, "请输入专项工作要求描述")
+		return
+	}
+
+	if len(strings.TrimSpace(req.Description)) < 10 {
+		utils.BadRequest(c, "工作要求描述至少需要10个字符")
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+
+	users, err := h.userRepo.FindAllActiveUsers(userID)
+	if err != nil || len(users) == 0 {
+		utils.BadRequest(c, "系统中暂无可用人员")
+		return
+	}
+
+	workTypeStats, _ := h.groupRepo.GetAllUsersWorkTypeStats()
+
+	result, err := h.aiSuggestGroupFormation(req.Description, req.GroupName, users, workTypeStats)
+	if err != nil {
+		result = h.fallbackSuggestGroupFormation(req.Description, req.GroupName, users, workTypeStats)
+	}
+
+	utils.Success(c, result)
+}
+
+func (h *WorkGroupHandler) aiSuggestGroupFormation(description, groupName string, users []models.User, workTypeStats map[string][]models.WorkTypeStat) (*AISuggestGroupsResult, error) {
+	configs, err := h.sysRepo.ListAIConfigs()
+	if err != nil || len(configs) == 0 {
+		return nil, fmt.Errorf("no AI config available")
+	}
+
+	var activeEndpoint, activeAPIKey, activeModel string
+	for _, cfg := range configs {
+		if cfg.IsActive {
+			decryptedKey, decErr := utils.DecryptAES(cfg.APIKey)
+			if decErr != nil {
+				continue
+			}
+			activeEndpoint = cfg.APIEndpoint
+			activeAPIKey = decryptedKey
+			activeModel = cfg.ModelName
+			break
+		}
+	}
+
+	if activeEndpoint == "" {
+		return nil, fmt.Errorf("no active AI config")
+	}
+	if activeModel == "" {
+		activeModel = "gpt-3.5-turbo"
+	}
+
+	prompt := buildAIGroupSuggestionPrompt(description, groupName, users, workTypeStats)
+	logger.Info("aiSuggestGroupFormation calling AI",
+		zap.String("model", activeModel),
+		zap.Int("prompt_len", len(prompt)),
+		zap.Int("user_count", len(users)),
+	)
+	aiResponse, aiErr := callAIService(activeEndpoint, activeAPIKey, activeModel, prompt, 4096)
+	if aiErr != nil {
+		logger.Error("aiSuggestGroupFormation AI call failed, using fallback",
+			zap.Error(aiErr),
+			zap.Int("prompt_len", len(prompt)),
+		)
+		return nil, aiErr
+	}
+
+	result, parseErr := parseAISuggestionResponse(aiResponse)
+	if parseErr != nil {
+		logger.Error("aiSuggestGroupFormation parse AI response failed",
+			zap.Error(parseErr),
+			zap.Int("response_len", len(aiResponse)),
+			zap.String("response_preview", aiResponse[:minInt(len(aiResponse), 200)]),
+		)
+		return nil, parseErr
+	}
+
+	userMap := make(map[string]models.User)
+	for _, u := range users {
+		userMap[u.ID.String()] = u
+	}
+
+	for i := range result.SubGroups {
+		for j := range result.SubGroups[i].Members {
+			m := &result.SubGroups[i].Members[j]
+			if u, ok := userMap[m.UserID]; ok {
+				m.Name = u.Name
+			}
+		}
+	}
+
+	result.Source = "ai"
+	return result, nil
+}
+
+func (h *WorkGroupHandler) fallbackSuggestGroupFormation(description, groupName string, users []models.User, workTypeStats map[string][]models.WorkTypeStat) *AISuggestGroupsResult {
+	result := &AISuggestGroupsResult{
+		Analysis:          "未能调用AI服务，根据人员职级与历史工作经验进行基础推荐，建议您手动调整人员分配。",
+		SuggestedName:     groupName,
+		SuggestedTemplate: "default",
+		SubGroups:         []AISuggestedGroup{},
+		Source:            "fallback",
+	}
+
+	if result.SuggestedName == "" {
+		result.SuggestedName = "专项工作组"
+	}
+
+	workTypePriorityOrder := []string{"special_project", "emergency_canvas", "data_analysis", "collaborative_writing", "default"}
+
+	usedUsers := make(map[string]bool)
+	leaderGroup := AISuggestedGroup{
+		Name:           "指挥协调组",
+		Responsibility: "总体协调、任务分配与进度跟踪",
+	}
+
+	for _, wt := range workTypePriorityOrder {
+		if len(leaderGroup.Members) >= 1 {
+			break
+		}
+		for _, u := range users {
+			if len(leaderGroup.Members) >= 1 {
+				break
+			}
+			if usedUsers[u.ID.String()] {
+				continue
+			}
+			stats, ok := workTypeStats[u.ID.String()]
+			if !ok {
+				continue
+			}
+			for _, s := range stats {
+				if s.WorkType == wt && s.GroupCount >= 2 {
+					leaderGroup.Members = append(leaderGroup.Members, AISuggestedMember{
+						UserID: u.ID.String(),
+						Name:   u.Name,
+						Role:   "leader",
+						Reason: fmt.Sprintf("有%d次%s工作经验", s.GroupCount, workTypeLabelZh(wt)),
+					})
+					usedUsers[u.ID.String()] = true
+					break
+				}
+			}
+		}
+	}
+
+	if len(leaderGroup.Members) == 0 && len(users) > 0 {
+		leaderGroup.Members = append(leaderGroup.Members, AISuggestedMember{
+			UserID: users[0].ID.String(),
+			Name:   users[0].Name,
+			Role:   "leader",
+			Reason: "系统随机推荐",
+		})
+		usedUsers[users[0].ID.String()] = true
+	}
+
+	result.SubGroups = append(result.SubGroups, leaderGroup)
+
+	memberGroup := AISuggestedGroup{
+		Name:           "执行工作组",
+		Responsibility: "具体任务执行与落实",
+	}
+
+	for _, u := range users {
+		if len(memberGroup.Members) >= 5 {
+			break
+		}
+		if usedUsers[u.ID.String()] {
+			continue
+		}
+		memberGroup.Members = append(memberGroup.Members, AISuggestedMember{
+			UserID: u.ID.String(),
+			Name:   u.Name,
+			Role:   "member",
+			Reason: "活跃人员推荐",
+		})
+		usedUsers[u.ID.String()] = true
+	}
+
+	if len(memberGroup.Members) > 0 {
+		result.SubGroups = append(result.SubGroups, memberGroup)
+	}
+
+	return result
+}
+
+func buildAIGroupSuggestionPrompt(description, groupName string, users []models.User, workTypeStats map[string][]models.WorkTypeStat) string {
+	var sb strings.Builder
+	sb.WriteString("你是一个专业的警务/政务工作团队组建顾问。请根据专项工作要求，为专项行动智能推荐最佳的人员分组方案。\n\n## 工作要求描述\n")
+	sb.WriteString(description)
+
+	if groupName != "" {
+		sb.WriteString(fmt.Sprintf("\n\n## 建议工作组名称\n%s\n", groupName))
+	}
+
+	sb.WriteString("\n## 可调配人员\n| 姓名 | 职位 | 职级 | 技能专长 | 部门 | 历史工作类型 |\n")
+	sb.WriteString("|------|------|------|----------|------|-------------|\n")
+	for _, u := range users {
+		deptName := ""
+		if u.Department != nil {
+			deptName = u.Department.Name
+		}
+		stats := ""
+		if s, ok := workTypeStats[u.ID.String()]; ok {
+			var statsParts []string
+			for _, st := range s {
+				statsParts = append(statsParts, fmt.Sprintf("%s(%d次)", workTypeLabelZh(st.WorkType), st.GroupCount))
+			}
+			stats = strings.Join(statsParts, "、")
+		}
+		sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s |\n",
+			u.Name, u.Position, u.Rank, u.Skills, deptName, stats))
+	}
+
+	sb.WriteString(`
+## 任务要求
+请分析上述工作要求，合理划分工作小组（建议2-4个），并为每个小组分配合适的人员。
+
+**分组原则：**
+1. 根据工作要求拆解为不同的子任务模块
+2. 每个小组有明确的职责分工
+3. 根据人员的技能、职位、职级、历史经验合理匹配
+4. 每组至少1人，不超过5人
+5. 同部门人员尽量集中，便于协调
+6. 小组长(leader)应选择职级较高或相关经验丰富的人员
+
+请严格按以下JSON格式输出（不要包含markdown代码块标记，只输出纯JSON）：
+{
+  "analysis": "对该专项工作的简要分析（50-100字）",
+  "suggested_name": "建议的工作组名称",
+  "suggested_template": "建议的模板类型：default/data_analysis/special_project/emergency_canvas/collaborative_writing之一",
+  "sub_groups": [
+    {
+      "name": "小组名称（如：数据分析组）",
+      "responsibility": "该小组的职责说明",
+      "members": [
+        {"name": "用户姓名", "role": "leader或member", "reason": "推荐理由，15字以内"}
+      ]
+    }
+  ]
+}
+
+**重要提醒：**
+- name 必须是上表中存在的用户姓名
+- 每个用户最多分配到一个小组
+- 分析要结合公安/政务工作实际
+- 组名要中文化且有实际含义`)
+	return sb.String()
+}
+
+func parseAISuggestionResponse(raw string) (*AISuggestGroupsResult, error) {
+	clean := strings.TrimSpace(raw)
+
+	if idx := strings.Index(clean, "```json"); idx >= 0 {
+		start := idx + 7
+		if end := strings.Index(clean[start:], "```"); end >= 0 {
+			clean = strings.TrimSpace(clean[start : start+end])
+		}
+	} else if idx := strings.Index(clean, "```"); idx >= 0 {
+		start := idx + 3
+		if nl := strings.Index(clean[start:], "\n"); nl >= 0 {
+			start += nl + 1
+		}
+		if end := strings.Index(clean[start:], "```"); end >= 0 {
+			clean = strings.TrimSpace(clean[start : start+end])
+		}
+	}
+
+	if idx := strings.Index(clean, "{"); idx > 0 {
+		clean = clean[idx:]
+	}
+	if idx := strings.LastIndex(clean, "}"); idx >= 0 && idx < len(clean)-1 {
+		clean = clean[:idx+1]
+	}
+
+	var result AISuggestGroupsResult
+	if err := json.Unmarshal([]byte(clean), &result); err != nil {
+		return nil, fmt.Errorf("parse AI response failed: %w", err)
+	}
+
+	if result.SuggestedTemplate == "" {
+		result.SuggestedTemplate = "default"
+	}
+
+	return &result, nil
+}
+
+func workTypeLabelZh(wt string) string {
+	labels := map[string]string{
+		"default":               "日常任务",
+		"data_analysis":         "数据分析",
+		"special_project":       "专项行动",
+		"emergency_canvas":      "紧急协查",
+		"collaborative_writing": "协同作战",
+	}
+	if label, ok := labels[wt]; ok {
+		return label
+	}
+	return wt
 }
 
 func buildGroupReportPrompt(groupName string, memberNames []string, total, completed int, notes []reportNoteInfo) string {
@@ -1085,8 +1423,7 @@ func renderReportHTML(title, content, genTime string) string {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>%s</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
-body { font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif; max-width: 900px; margin: 0 auto; padding: 40px 20px; color: #1e293b; background: #fff; }
+body { font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif; max-width: 900px; margin: 0 auto; padding: 40px 20px; color: #1e293b; background: #fff; }
 h1 { color: #1e293b; font-size: 24px; }
 .meta { color: #94a3b8; font-size: 13px; margin-bottom: 24px; }
 </style>

@@ -44,3 +44,13 @@ export interface DashboardData {
 export function getGroupDashboard(groupId: string): Promise<ApiResponse<DashboardData>> {
   return get(`/api/v1/groups/${groupId}/dashboard`);
 }
+
+export interface RoomCanvasData {
+  columns: number;
+  canvas_data: Record<number, string>;
+  version: number;
+}
+
+export function getRoomCanvas(noteId: string): Promise<ApiResponse<RoomCanvasData>> {
+  return get(`/api/v1/rooms/${noteId}/canvas`);
+}

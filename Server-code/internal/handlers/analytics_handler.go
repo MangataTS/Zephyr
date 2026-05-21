@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"labelpro-server/internal/logger"
 	"labelpro-server/internal/middleware"
 	"labelpro-server/internal/models"
 	"labelpro-server/internal/repository"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type AnalyticsHandler struct {
@@ -124,7 +126,7 @@ func (h *AnalyticsHandler) GenerateAIReport(c *gin.Context) {
 				modelName = "gpt-3.5-turbo"
 			}
 			prompt := buildReportPrompt(userName, periodLabel, stats, period)
-			aiReport, aiErr := callAIService(activeConfig.endpoint, activeConfig.apiKey, modelName, prompt)
+			aiReport, aiErr := callAIService(activeConfig.endpoint, activeConfig.apiKey, modelName, prompt, 4096)
 			if aiErr == nil {
 				reportContent = aiReport
 				reportType = "ai"
@@ -394,32 +396,66 @@ func (h *AnalyticsHandler) generatePeriodReport(c *gin.Context, userID, userName
 	sourceStats := h.getSourceTypeDistribution(userID, since)
 	tagSummary := buildTagSummary(stats.TagBreakdown)
 	sourceSummary := buildSourceSummary(sourceStats)
+	dateRange := fmt.Sprintf("%s ~ %s", since.Format("2006-01-02"), now.Format("2006-01-02"))
 
-	completionDesc := "工作完成情况良好"
-	if stats.CompletionRate < 30 {
-		completionDesc = "工作任务完成率较低，建议加强任务推进力度"
-	} else if stats.CompletionRate < 60 {
-		completionDesc = "工作完成率有待提升，建议合理规划任务优先级"
-	} else if stats.CompletionRate < 80 {
-		completionDesc = "工作推进较为稳健，完成率处于中等水平"
+	reportType := "template"
+	var reportContent string
+
+	configs, cfgErr := h.sysRepo.ListAIConfigs()
+	if cfgErr == nil && len(configs) > 0 {
+		var activeEndpoint, activeAPIKey, activeModel string
+		for _, cfg := range configs {
+			if cfg.IsActive {
+				decryptedKey, decErr := utils.DecryptAES(cfg.APIKey)
+				if decErr != nil {
+					continue
+				}
+				activeEndpoint = cfg.APIEndpoint
+				activeAPIKey = decryptedKey
+				activeModel = cfg.ModelName
+				break
+			}
+		}
+		if activeEndpoint != "" {
+			if activeModel == "" {
+				activeModel = "gpt-3.5-turbo"
+			}
+			prompt := buildPeriodReportPrompt(userName, periodLabel, dateRange, stats, tagSummary, sourceSummary)
+			aiReport, aiErr := callAIService(activeEndpoint, activeAPIKey, activeModel, prompt, 4096)
+			if aiErr == nil {
+				reportContent = aiReport
+				reportType = "ai"
+			}
+		}
 	}
 
-	template := getDefaultReportTemplateForPeriod()
-	tpl, err := h.sysRepo.GetReportTemplate("default")
-	if err == nil && tpl.Content != "" {
-		template = tpl.Content
-	}
+	if reportContent == "" {
+		completionDesc := "工作完成情况良好"
+		if stats.CompletionRate < 30 {
+			completionDesc = "工作任务完成率较低，建议加强任务推进力度"
+		} else if stats.CompletionRate < 60 {
+			completionDesc = "工作完成率有待提升，建议合理规划任务优先级"
+		} else if stats.CompletionRate < 80 {
+			completionDesc = "工作推进较为稳健，完成率处于中等水平"
+		}
 
-	report := template
-	report = strings.ReplaceAll(report, "{{userName}}", userName)
-	report = strings.ReplaceAll(report, "{{periodLabel}}", periodLabel)
-	report = strings.ReplaceAll(report, "{{totalCreated}}", strconv.FormatInt(stats.TotalCreated, 10))
-	report = strings.ReplaceAll(report, "{{totalCompleted}}", strconv.FormatInt(stats.TotalCompleted, 10))
-	report = strings.ReplaceAll(report, "{{completionRate}}", fmt.Sprintf("%.1f", stats.CompletionRate))
-	report = strings.ReplaceAll(report, "{{completionDesc}}", completionDesc)
-	report = strings.ReplaceAll(report, "{{tagSummary}}", tagSummary)
-	report = strings.ReplaceAll(report, "{{sourceSummary}}", sourceSummary)
-	report = strings.ReplaceAll(report, "{{dateRange}}", fmt.Sprintf("%s ~ %s", since.Format("01-02"), now.Format("01-02")))
+		template := getDefaultReportTemplateForPeriod()
+		tpl, err := h.sysRepo.GetReportTemplate("default")
+		if err == nil && tpl.Content != "" {
+			template = tpl.Content
+		}
+
+		reportContent = template
+		reportContent = strings.ReplaceAll(reportContent, "{{userName}}", userName)
+		reportContent = strings.ReplaceAll(reportContent, "{{periodLabel}}", periodLabel)
+		reportContent = strings.ReplaceAll(reportContent, "{{totalCreated}}", strconv.FormatInt(stats.TotalCreated, 10))
+		reportContent = strings.ReplaceAll(reportContent, "{{totalCompleted}}", strconv.FormatInt(stats.TotalCompleted, 10))
+		reportContent = strings.ReplaceAll(reportContent, "{{completionRate}}", fmt.Sprintf("%.1f", stats.CompletionRate))
+		reportContent = strings.ReplaceAll(reportContent, "{{completionDesc}}", completionDesc)
+		reportContent = strings.ReplaceAll(reportContent, "{{tagSummary}}", tagSummary)
+		reportContent = strings.ReplaceAll(reportContent, "{{sourceSummary}}", sourceSummary)
+		reportContent = strings.ReplaceAll(reportContent, "{{dateRange}}", fmt.Sprintf("%s ~ %s", since.Format("01-02"), now.Format("01-02")))
+	}
 
 	statsJSON, _ := json.Marshal(map[string]interface{}{
 		"stats":        stats,
@@ -434,9 +470,9 @@ func (h *AnalyticsHandler) generatePeriodReport(c *gin.Context, userID, userName
 		UserName:     userName,
 		Period:       period,
 		PeriodLabel:  periodLabel,
-		ReportType:   "template",
+		ReportType:   reportType,
 		Title:        title,
-		Content:      report,
+		Content:      reportContent,
 		StatsSummary: string(statsJSON),
 	}
 	_ = h.sysRepo.CreateWorkReport(workReport)
@@ -445,10 +481,10 @@ func (h *AnalyticsHandler) generatePeriodReport(c *gin.Context, userID, userName
 		"report_id":     workReport.ID.String(),
 		"period":        period,
 		"period_label":  periodLabel,
-		"report_type":   "template",
+		"report_type":   reportType,
 		"stats":         stats,
 		"source_stats":  sourceStats,
-		"report":        report,
+		"report":        reportContent,
 		"generated_at":  workReport.CreatedAt.Format(time.RFC3339),
 	})
 }
@@ -566,14 +602,68 @@ func buildReportPrompt(userName, periodLabel string, stats *repository.PersonalS
 	)
 }
 
+func buildPeriodReportPrompt(userName, periodLabel, dateRange string, stats *repository.PersonalStats, tagSummary, sourceSummary string) string {
+	dailyTrendDesc := ""
+	for _, d := range stats.DailyTrend {
+		dailyTrendDesc += fmt.Sprintf("%s: %d条\n", d.Date, d.Count)
+	}
+	if dailyTrendDesc == "" {
+		dailyTrendDesc = "无日趋势数据"
+	}
+
+	return fmt.Sprintf(`你是一位专业的工作效能分析师。请根据以下数据，为%s生成一份%s（%s）的结构化个人工作报告。
+
+## 统计数据
+- 周期：%s
+- 日期范围：%s
+- 创建任务总数：%d
+- 完成任务数：%d
+- 完成率：%.1f%%
+- 被盯办次数：%d
+- 平均完成耗时：%.1f 小时
+
+## 任务分类统计
+%s
+
+## 来源类型分布
+%s
+
+## 每日任务趋势
+%s
+
+## 要求
+请生成一份专业的工作报告（使用 Markdown 格式），包含以下部分：
+1. **工作概览**：用一段话总结%s的整体工作表现，突出关键数据
+2. **任务分类分析**：解读任务标签分布，说明工作重点集中在哪些领域
+3. **来源类型分析**：分析自主创建与上级交办任务的占比，说明工作主动性与被动性
+4. **趋势总结**：分析每日任务变化趋势
+5. **成果亮点**：指出值得肯定的成绩
+6. **改进建议**：提出针对性的改进方向
+
+报告语言使用中文，语气专业且鼓励性。直接输出报告内容，不需要前言。`,
+		userName, periodLabel, dateRange,
+		periodLabel, dateRange,
+		stats.TotalCreated,
+		stats.TotalCompleted,
+		stats.CompletionRate,
+		stats.RemindReceived,
+		stats.AvgCompletionHours,
+		tagSummary,
+		sourceSummary,
+		dailyTrendDesc,
+		periodLabel,
+	)
+}
+
 type chatMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
 type chatRequest struct {
-	Model    string        `json:"model"`
-	Messages []chatMessage `json:"messages"`
+	Model       string        `json:"model"`
+	Messages    []chatMessage `json:"messages"`
+	MaxTokens   int           `json:"max_tokens,omitempty"`
 }
 
 type chatResponse struct {
@@ -584,21 +674,35 @@ type chatResponse struct {
 	} `json:"choices"`
 }
 
-func callAIService(endpoint, apiKey, model, prompt string) (string, error) {
+func callAIService(endpoint, apiKey, model, prompt string, maxTokens int) (string, error) {
+	logger.Debug("callAIService starting",
+		zap.String("model", model),
+		zap.Int("prompt_len", len(prompt)),
+		zap.Int("max_tokens", maxTokens),
+		zap.String("endpoint_prefix", endpoint[:minInt(len(endpoint), 50)]),
+	)
+
 	reqBody := chatRequest{
-		Model: model,
+		Model:     model,
 		Messages: []chatMessage{
 			{Role: "user", Content: prompt},
 		},
+		MaxTokens: maxTokens,
 	}
 
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
+		logger.Error("callAIService marshal failed", zap.Error(err))
 		return "", fmt.Errorf("请求序列化失败: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", endpoint+"/chat/completions", bytes.NewReader(jsonBody))
+	url := endpoint
+	if !strings.HasSuffix(url, "/chat/completions") {
+		url = strings.TrimRight(url, "/") + "/chat/completions"
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewReader(jsonBody))
 	if err != nil {
+		logger.Error("callAIService create request failed", zap.Error(err))
 		return "", fmt.Errorf("创建请求失败: %w", err)
 	}
 
@@ -606,32 +710,56 @@ func callAIService(endpoint, apiKey, model, prompt string) (string, error) {
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: 180 * time.Second,
 		Transport: &http.Transport{
-			DialContext: (&net.Dialer{Timeout: 5 * time.Second}).DialContext,
-			TLSHandshakeTimeout: 5 * time.Second,
+			DialContext:         (&net.Dialer{Timeout: 15 * time.Second}).DialContext,
+			TLSHandshakeTimeout: 15 * time.Second,
 		},
 	}
 	resp, err := client.Do(req)
 	if err != nil {
+		logger.Error("callAIService HTTP request failed",
+			zap.Error(err),
+			zap.String("url", url[:minInt(len(url), 80)]),
+			zap.Int("body_len", len(jsonBody)),
+		)
 		return "", fmt.Errorf("AI服务请求失败: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBody, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("AI服务返回错误 (状态码 %d): %s", resp.StatusCode, string(respBody[:minInt(len(respBody), 300)]))
+		errBody := string(respBody)
+		if len(errBody) > 1000 {
+			errBody = errBody[:1000]
+		}
+		logger.Error("callAIService non-200 response",
+			zap.Int("status_code", resp.StatusCode),
+			zap.String("response_body", errBody),
+			zap.Int("prompt_len", len(prompt)),
+		)
+		return "", fmt.Errorf("AI服务返回错误 (状态码 %d): %s", resp.StatusCode, errBody)
 	}
 
 	var chatResp chatResponse
 	if err := json.Unmarshal(respBody, &chatResp); err != nil {
+		logger.Error("callAIService unmarshal response failed",
+			zap.Error(err),
+			zap.Int("resp_len", len(respBody)),
+		)
 		return "", fmt.Errorf("AI响应解析失败: %w", err)
 	}
 
 	if len(chatResp.Choices) == 0 {
+		logger.Error("callAIService empty choices",
+			zap.Int("resp_len", len(respBody)),
+		)
 		return "", fmt.Errorf("AI返回空响应")
 	}
 
+	logger.Debug("callAIService succeeded",
+		zap.Int("response_len", len(chatResp.Choices[0].Message.Content)),
+	)
 	return chatResp.Choices[0].Message.Content, nil
 }
 

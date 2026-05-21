@@ -101,11 +101,22 @@ function navigate(path: string) {
         </svg>
       </button>
       <transition name="fade">
-        <span
-          v-if="!collapsed"
-          class="ml-3 text-sm font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap truncate"
-          >轻燕</span
-        >
+        <div v-if="!collapsed" class="ml-3 flex items-center gap-2">
+          <img
+            src="/logo.jpg"
+            alt="轻燕"
+            class="w-7 h-7 rounded-lg object-cover shrink-0"
+          />
+          <span class="text-sm font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap truncate">轻燕</span>
+        </div>
+      </transition>
+      <transition name="fade">
+        <img
+          v-if="collapsed"
+          src="/logo.jpg"
+          alt="轻燕"
+          class="w-7 h-7 rounded-lg object-cover shrink-0"
+        />
       </transition>
     </div>
 

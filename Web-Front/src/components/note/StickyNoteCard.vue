@@ -109,10 +109,12 @@ function toggleExpand() {
     <!-- 已归档水印 -->
     <span v-if="isArchived" class="watermark-archived">已归档</span>
 
-    <h3 class="text-base font-semibold text-slate-900 mb-2 line-clamp-1">
+    <h3 class="text-base font-semibold text-slate-900 mb-1 line-clamp-1">
       {{ note.title || '无标题' }}
     </h3>
-
+    <p v-if="note.sub_tag" class="text-xs text-slate-400 mb-2 line-clamp-1">
+      {{ note.sub_tag }}
+    </p>
     <div
       :class="[
         'text-sm text-slate-500 transition-all duration-300 overflow-hidden',

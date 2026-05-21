@@ -200,7 +200,7 @@ func (c *Config) setDefaults() {
 		c.Server.ReadTimeoutSeconds = 30
 	}
 	if c.Server.WriteTimeoutSeconds == 0 {
-		c.Server.WriteTimeoutSeconds = 30
+		c.Server.WriteTimeoutSeconds = 200
 	}
 	if c.Database.Port == 0 {
 		c.Database.Port = 5432

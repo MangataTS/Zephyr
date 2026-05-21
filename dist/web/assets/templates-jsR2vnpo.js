@@ -1,0 +1,1 @@
+import{i as e,n as t,r as n,t as r}from"./api-B-lFs09t.js";function i(e){return t(`/api/v1/templates`,e)}function a(e){return n(`/api/v1/templates`,e)}function o(t,n){return e(`/api/v1/templates/${t}`,n)}function s(e){return r(`/api/v1/templates/${e}`)}export{o as i,s as n,i as r,a as t};

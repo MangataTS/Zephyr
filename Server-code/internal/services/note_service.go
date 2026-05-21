@@ -23,7 +23,9 @@ func NewNoteService(noteRepo *repository.NoteRepository) *NoteService {
 
 type CreateNoteRequest struct {
 	Title        string               `json:"title" binding:"required"`
+	SubTag       string               `json:"sub_tag"`
 	Content      string               `json:"content"`
+	ContentDelta string               `json:"content_delta"`
 	TagIDs       []string             `json:"tags"`
 	SourceType   string               `json:"source_type"`
 	TemplateType string               `json:"template_type"`
@@ -57,12 +59,14 @@ type CanvasConfigRequest struct {
 }
 
 type UpdateNoteRequest struct {
-	Title       *string    `json:"title"`
-	Content     *string    `json:"content"`
-	TagIDs      *[]string  `json:"tags"`
-	DueTime     *time.Time `json:"due_time"`
-	ColorStatus *string    `json:"color_status"`
-	OwnerID     *string    `json:"owner_id"`
+	Title        *string    `json:"title"`
+	SubTag       *string    `json:"sub_tag"`
+	Content      *string    `json:"content"`
+	ContentDelta *string    `json:"content_delta"`
+	TagIDs       *[]string  `json:"tags"`
+	DueTime      *time.Time `json:"due_time"`
+	ColorStatus  *string    `json:"color_status"`
+	OwnerID      *string    `json:"owner_id"`
 }
 
 type CompleteNoteRequest struct {
@@ -141,7 +145,9 @@ func (s *NoteService) Create(userID, role, deptID string, req CreateNoteRequest)
 
 	note := &models.Note{
 		Title:        req.Title,
+		SubTag:       req.SubTag,
 		Content:      req.Content,
+		ContentDelta: req.ContentDelta,
 		ColorStatus:  initialColorStatus,
 		SourceType:   sourceType,
 		TemplateType: req.TemplateType,
@@ -222,8 +228,14 @@ func (s *NoteService) Update(id, userID string, req UpdateNoteRequest) (*models.
 	if req.Title != nil {
 		note.Title = *req.Title
 	}
+	if req.SubTag != nil {
+		note.SubTag = *req.SubTag
+	}
 	if req.Content != nil {
 		note.Content = *req.Content
+	}
+	if req.ContentDelta != nil {
+		note.ContentDelta = *req.ContentDelta
 	}
 	if req.DueTime != nil {
 		note.DueTime = req.DueTime

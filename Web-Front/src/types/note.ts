@@ -7,7 +7,9 @@ export type NoteSourceType = 'self' | 'assigned' | 'collaboration'
 export interface Note {
   id: string
   title: string
+  sub_tag?: string
   content: string
+  content_delta?: string
   color_status: 'yellow' | 'red' | 'green' | 'blue'
   source_type: NoteSourceType
   owner_id: string
@@ -49,7 +51,9 @@ export const NOTE_COLOR_BORDER: Record<string, string> = {
 
 export interface CreateNotePayload {
   title: string
+  sub_tag?: string
   content: string
+  content_delta?: string
   tags: string[]
   source_type: NoteSourceType
   due_time?: string
@@ -60,7 +64,9 @@ export interface CreateNotePayload {
 
 export interface UpdateNotePayload {
   title?: string
+  sub_tag?: string
   content?: string
+  content_delta?: string
   tags?: string[]
   due_time?: string
   color_status?: string

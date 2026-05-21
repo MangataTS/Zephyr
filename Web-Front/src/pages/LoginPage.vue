@@ -41,18 +41,11 @@ async function handleLogin() {
 <template>
   <div class="min-h-screen bg-white flex">
     <div class="hidden lg:flex lg:w-[480px] bg-slate-50 flex-col items-center justify-center p-12">
-      <div
-        class="w-20 h-20 bg-blue-500 rounded-2xl flex items-center justify-center mb-8 shadow-lg"
-      >
-        <svg class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-          />
-        </svg>
-      </div>
+      <img
+        src="/logo.jpg"
+        alt="轻燕工作台"
+        class="w-24 h-24 rounded-2xl object-cover mb-8 shadow-lg"
+      />
       <h1 class="text-2xl font-semibold text-slate-900 mb-2" style="letter-spacing: -0.02em">
         轻燕工作台
       </h1>
@@ -75,18 +68,11 @@ async function handleLogin() {
     <div class="flex-1 flex items-center justify-center p-8">
       <div class="w-full max-w-[400px]">
         <div class="lg:hidden mb-10 text-center">
-          <div
-            class="w-14 h-14 bg-blue-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg"
-          >
-            <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-              />
-            </svg>
-          </div>
+          <img
+            src="/logo.jpg"
+            alt="轻燕工作台"
+            class="w-16 h-16 rounded-xl object-cover mx-auto mb-4 shadow-lg"
+          />
           <h1 class="text-xl font-semibold text-slate-900">轻燕工作台</h1>
         </div>
 

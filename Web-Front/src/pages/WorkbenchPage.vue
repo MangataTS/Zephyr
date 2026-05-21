@@ -7,8 +7,8 @@ import type { Note } from '@/types';
 import TagSelector from '@/components/common/TagSelector.vue';
 import StickyNoteCard from '@/components/note/StickyNoteCard.vue';
 import UserPicker from '@/components/common/UserPicker.vue';
-import { createWorkGroup, searchGroups, deleteWorkGroup } from '@/services/workgroup';
-import type { WorkGroupData } from '@/services/workgroup';
+import { createWorkGroup, searchGroups, deleteWorkGroup, aiSuggestGroups } from '@/services/workgroup';
+import type { WorkGroupData, AISuggestGroupsResult } from '@/services/workgroup';
 import { recommendUsers, getWorkTypeOptions } from '@/services/admin';
 import type { WorkTypeOption } from '@/types';
 import { getPresets } from '@/services/presets';
@@ -24,6 +24,7 @@ const showDetailPanel = ref(false);
 const selectedNote = ref<Note | null>(null);
 
 const newTitle = ref('');
+const newSubTag = ref('');
 const newContent = ref('');
 const selectedTagIds = ref<string[]>([]);
 const sourceType = ref<'self' | 'assigned' | 'collaboration'>('self');
@@ -32,6 +33,7 @@ const creating = ref(false);
 const createError = ref('');
 
 const editingTitle = ref('');
+const editingSubTag = ref('');
 const editingContent = ref('');
 const selectedEditingTagIds = ref<string[]>([]);
 const saving = ref(false);
@@ -77,6 +79,12 @@ const selectedPresetId = ref('');
 
 const userTemplates = ref<Template[]>([]);
 const selectedTemplateId = ref('');
+
+const aiMode = ref(false);
+const aiDescription = ref('');
+const aiSuggesting = ref(false);
+const aiResult = ref<AISuggestGroupsResult | null>(null);
+const aiError = ref('');
 
 const displayedNotes = computed(() => {
   if (activeTab.value === 'red')
@@ -130,6 +138,7 @@ function openCreateModal() {
 function openDetail(note: Note) {
   selectedNote.value = note;
   editingTitle.value = note.title || '';
+  editingSubTag.value = note.sub_tag || '';
   editingContent.value = note.content || '';
   selectedEditingTagIds.value = (note.tags || []).map((t) => t.id);
   tagError.value = '';
@@ -156,6 +165,7 @@ async function handleSubmit() {
   try {
     const payload: any = {
       title: newTitle.value.trim(),
+      sub_tag: newSubTag.value.trim(),
       content: newContent.value,
       tags: selectedTagIds.value,
       source_type: sourceType.value,
@@ -192,6 +202,7 @@ async function handleSaveDetail() {
   try {
     await noteStore.updateNoteLocally(selectedNote.value.id, {
       title: editingTitle.value.trim(),
+      sub_tag: editingSubTag.value.trim(),
       content: editingContent.value,
       tags: selectedEditingTagIds.value,
     } as any);
@@ -272,6 +283,10 @@ function openWGModal() {
   wgSubGroups.value = [{ name: '', members: [] }];
   selectedWGUserIds.value = [[]];
   wgError.value = '';
+  aiMode.value = false;
+  aiDescription.value = '';
+  aiResult.value = null;
+  aiError.value = '';
   showWorkGroupModal.value = true;
 }
 function addSubGroup() {
@@ -336,6 +351,69 @@ async function handleDeleteGroup(id: string) {
   } catch {
     /* ignore */
   }
+}
+
+function openAIMode() {
+  aiMode.value = true;
+  aiDescription.value = wgDescription.value || '';
+  aiResult.value = null;
+  aiError.value = '';
+}
+
+function closeAIMode() {
+  aiMode.value = false;
+  aiResult.value = null;
+  aiError.value = '';
+}
+
+async function handleAISuggest() {
+  if (!aiDescription.value.trim() || aiDescription.value.trim().length < 10) {
+    aiError.value = '请至少输入10个字的工作要求描述';
+    return;
+  }
+  aiSuggesting.value = true;
+  aiError.value = '';
+  aiResult.value = null;
+  try {
+    const res = await aiSuggestGroups(aiDescription.value.trim(), wgName.value.trim());
+    aiResult.value = (res.data as unknown as AISuggestGroupsResult) ?? null;
+    if (!aiResult.value) {
+      aiError.value = 'AI未能返回有效的分组建议';
+    }
+  } catch (e: unknown) {
+    aiError.value =
+      (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+      'AI分析失败，请稍后重试';
+  } finally {
+    aiSuggesting.value = false;
+  }
+}
+
+function applyAISuggestion() {
+  if (!aiResult.value) return;
+
+  if (aiResult.value.suggested_name) {
+    wgName.value = aiResult.value.suggested_name;
+  }
+  if (aiResult.value.suggested_template) {
+    wgTemplate.value = aiResult.value.suggested_template;
+  }
+  wgDescription.value = aiDescription.value;
+
+  wgSubGroups.value = aiResult.value.sub_groups.map((sg) => ({
+    name: sg.name,
+    members: sg.members.map((m) => ({
+      user_id: m.user_id,
+      role: m.role,
+      sub_group_name: sg.name,
+    })),
+  }));
+  selectedWGUserIds.value = aiResult.value.sub_groups.map((sg) =>
+    sg.members.map((m) => m.user_id)
+  );
+
+  aiMode.value = false;
+  aiResult.value = null;
 }
 
 async function loadWorkTypeOptions() {
@@ -748,9 +826,16 @@ const templateLabels: Record<string, string> = {
               </button>
             </div>
             <form class="space-y-4" @submit.prevent="handleSubmit" @keydown.enter.prevent>
-              <input v-model="newTitle" class="input-field" placeholder="任务标题" autofocus />
+              <input v-model="newTitle" name="title" class="input-field" placeholder="任务标题" autofocus />
+              <input
+                v-model="newSubTag"
+                name="sub_tag"
+                class="input-field"
+                placeholder="二级标题 / 子标签（可选）"
+              />
               <textarea
                 v-model="newContent"
+                name="content"
                 class="input-field h-32 resize-none"
                 placeholder="任务内容..."
               />
@@ -938,6 +1023,14 @@ const templateLabels: Record<string, string> = {
                 ><input v-model="editingTitle" class="input-field text-base font-semibold" />
               </div>
               <div>
+                <span class="text-xs text-slate-400 mb-1 block">二级标题 / 子标签</span
+                ><input
+                  v-model="editingSubTag"
+                  class="input-field"
+                  placeholder="二级标题（可选）"
+                />
+              </div>
+              <div>
                 <span class="text-xs text-slate-400 mb-1 block">内容</span
                 ><textarea
                   v-model="editingContent"
@@ -1083,8 +1176,120 @@ const templateLabels: Record<string, string> = {
                 ><textarea
                   v-model="wgDescription"
                   class="input-field h-20 resize-none"
-                  placeholder="填写专项工作的具体要求、目标、时间节点及交付标准..."
+                  :placeholder="aiMode ? '请详细描述专项工作内容、目标、预期成果、所需技能要求…' : '填写专项工作的具体要求、目标、时间节点及交付标准...'"
                 />
+              </div>
+              <div v-if="!aiMode">
+                <button
+                  type="button"
+                  class="w-full px-4 py-2.5 text-sm font-medium rounded-lg border-2 border-dashed border-purple-300 dark:border-purple-600 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 hover:from-purple-100 hover:to-blue-100 dark:hover:from-purple-900/30 dark:hover:to-blue-900/30 text-purple-600 dark:text-purple-400 transition-smooth flex items-center justify-center gap-2"
+                  @click="openAIMode"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  🤖 AI智能成组 — 根据工作描述自动推荐人员分组
+                </button>
+              </div>
+              <div
+                v-if="aiMode"
+                class="p-4 rounded-xl border-2 border-purple-300 dark:border-purple-600 bg-gradient-to-br from-purple-50/60 via-white to-blue-50/60 dark:from-purple-900/10 dark:via-slate-800 dark:to-blue-900/10 space-y-3"
+              >
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-semibold text-purple-700 dark:text-purple-400">🤖 AI智能成组</span>
+                  <span class="text-[10px] px-1.5 py-0.5 bg-purple-100 dark:bg-purple-800 text-purple-600 dark:text-purple-300 rounded-tag">Beta</span>
+                  <button
+                    type="button"
+                    class="ml-auto text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    @click="closeAIMode"
+                  >✕ 退出</button>
+                </div>
+                <textarea
+                  v-model="aiDescription"
+                  class="input-field h-24 resize-none"
+                  placeholder="请详细描述专项工作内容：包括工作目标、主要任务、所需技能、时间要求等。例如：&#10;针对近期辖区内电信网络诈骗案件高发态势，需成立专项研判打击工作组，对涉案资金流、信息流进行深入分析，并与各片区派出所联动开展精准预警劝阻工作…"
+                />
+                <div class="flex items-center gap-3">
+                  <button
+                    type="button"
+                    class="px-5 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 rounded-lg transition-smooth disabled:opacity-50 flex items-center gap-2"
+                    :disabled="aiSuggesting"
+                    @click="handleAISuggest"
+                  >
+                    <span
+                      v-if="aiSuggesting"
+                      class="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"
+                    ></span>
+                    <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    {{ aiSuggesting ? 'AI正在分析中…' : '开始AI智能分析' }}
+                  </button>
+                  <span class="text-[10px] text-slate-400">
+                    AI将根据人员技能、职位、历史经验自动匹配最佳分组方案
+                  </span>
+                </div>
+                <p v-if="aiError" class="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">
+                  {{ aiError }}
+                </p>
+                <div
+                  v-if="aiResult && aiResult.sub_groups.length > 0"
+                  class="space-y-3"
+                >
+                  <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <span class="font-medium">{{ aiResult.source === 'ai' ? '✨ AI分析结果' : '📋 系统推荐方案' }}</span>
+                    <span v-if="aiResult.source !== 'ai'" class="text-[10px] text-orange-500">（AI未可用，使用备用推荐）</span>
+                  </div>
+                  <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed bg-white/50 dark:bg-slate-800/50 rounded-lg p-3">
+                    {{ aiResult.analysis }}
+                  </p>
+                  <div class="flex items-center gap-2 text-xs">
+                    <span class="text-slate-400">建议名称：</span>
+                    <span class="font-medium text-slate-700 dark:text-slate-200">{{ aiResult.suggested_name }}</span>
+                    <span class="text-slate-400 ml-2">模板：</span>
+                    <span class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-300 rounded-tag text-[10px]">
+                      {{ templateLabels[aiResult.suggested_template] || aiResult.suggested_template }}
+                    </span>
+                  </div>
+                  <div class="space-y-2">
+                    <div
+                      v-for="(sg, sgi) in aiResult.sub_groups"
+                      :key="sgi"
+                      class="p-3 rounded-xl border border-purple-100 dark:border-purple-800 bg-white/70 dark:bg-slate-800/70"
+                    >
+                      <div class="flex items-baseline gap-2 mb-1">
+                        <span
+                          class="text-[10px] px-1.5 py-0.5 rounded-tag font-medium"
+                          :class="sgi === 0
+                            ? 'bg-purple-100 dark:bg-purple-800 text-purple-600 dark:text-purple-400'
+                            : 'bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-400'"
+                        >{{ sg.name }}</span>
+                        <span class="text-[10px] text-slate-400">{{ sg.responsibility }}</span>
+                      </div>
+                      <div class="flex flex-wrap gap-1.5 mt-2">
+                        <span
+                          v-for="m in sg.members"
+                          :key="m.user_id"
+                          class="text-xs px-2 py-1 rounded-full border"
+                          :class="m.role === 'leader'
+                            ? 'border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+                            : 'border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300'"
+                          :title="m.reason"
+                        >
+                          {{ m.role === 'leader' ? '👑 ' : '' }}{{ m.name }}
+                          <span class="text-[10px] opacity-50 ml-0.5">{{ m.reason }}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="w-full px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-lg transition-smooth flex items-center justify-center gap-2"
+                    @click="applyAISuggestion"
+                  >
+                    ✅ 采纳此方案，填充工作组信息
+                  </button>
+                </div>
               </div>
               <div>
                 <label class="text-xs text-slate-500 mb-1 block">截止日期</label

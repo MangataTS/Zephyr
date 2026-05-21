@@ -1,0 +1,1 @@
+import{n as e,r as t}from"./api-B-lFs09t.js";function n(t){return e(`/api/v1/tags`,{scope:t})}function r(e){return t(`/api/v1/tags`,e)}export{n,r as t};

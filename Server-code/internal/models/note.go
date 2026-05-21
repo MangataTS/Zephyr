@@ -10,6 +10,7 @@ import (
 type Note struct {
 	ID           uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	Title        string         `gorm:"type:varchar(200);not null" json:"title"`
+	SubTag       string         `gorm:"type:varchar(100);default:''" json:"sub_tag"`
 	Content      string         `gorm:"type:text" json:"content"`
 	ContentDelta string         `gorm:"type:jsonb;default:'{}'" json:"content_delta,omitempty"`
 	ColorStatus  string         `gorm:"type:varchar(20);default:'yellow'" json:"color_status"`

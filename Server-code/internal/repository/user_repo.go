@@ -91,6 +91,16 @@ func (r *UserRepository) FindVisibleUsers(userID string, deptID string) ([]model
 	return users, err
 }
 
+func (r *UserRepository) FindAllActiveUsers(userID string) ([]models.User, error) {
+	var users []models.User
+	err := r.db.Where("id != ?", userID).
+		Where("is_active = ?", true).
+		Preload("Department").
+		Order("name ASC").
+		Find(&users).Error
+	return users, err
+}
+
 func (r *UserRepository) Update(user *models.User) error {
 	return r.db.Omit("Department").Save(user).Error
 }

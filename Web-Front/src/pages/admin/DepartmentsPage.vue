@@ -27,7 +27,8 @@ async function loadData() {
   loadError.value = ''
   try {
     const res = await getDepartments(false)
-    departments.value = res.data as unknown as Department[]
+    const data = res.data
+    departments.value = Array.isArray(data) ? data : []
     if (departments.value.length > 0 && expanded.value.size === 0) {
       expanded.value.add(departments.value[0].id)
     }
@@ -204,7 +205,7 @@ function getDeptLevelLabel(level?: number): string {
         <div v-else class="space-y-3">
           <div>
             <span class="text-xs text-slate-400 mb-1 block">部门名称</span>
-            <input v-model="editName" class="input-field !py-1.5 !text-sm" placeholder="部门名称" />
+            <input v-model="editName" name="dept_name" class="input-field !py-1.5 !text-sm" placeholder="部门名称" />
           </div>
           <div>
             <span class="text-xs text-slate-400 mb-1 block">上级部门</span>
@@ -242,7 +243,7 @@ function getDeptLevelLabel(level?: number): string {
           <form @submit.prevent="handleCreate" class="space-y-4">
             <div>
               <span class="text-xs text-slate-500 mb-1 block">部门名称</span>
-              <input v-model="newName" class="input-field" placeholder="请输入部门名称" autofocus />
+              <input v-model="newName" name="dept_name" class="input-field" placeholder="请输入部门名称" autofocus />
             </div>
             <div>
               <span class="text-xs text-slate-500 mb-1 block">上级部门</span>

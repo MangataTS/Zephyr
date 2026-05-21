@@ -541,33 +541,33 @@ onMounted(async () => {
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <span class="text-xs text-slate-500 mb-1 block">用户名</span>
-                <input v-model="formUsername" class="input-field !py-1.5 !text-sm" placeholder="登录用户名" :disabled="!!editingUserId" />
+                <input v-model="formUsername" name="username" class="input-field !py-1.5 !text-sm" placeholder="登录用户名" :disabled="!!editingUserId" />
               </div>
               <div>
                 <span class="text-xs text-slate-500 mb-1 block">密码</span>
-                <input v-model="formPassword" type="password" class="input-field !py-1.5 !text-sm" :placeholder="editingUserId ? '留空不修改' : '设置密码'" />
+                <input v-model="formPassword" name="password" type="password" class="input-field !py-1.5 !text-sm" :placeholder="editingUserId ? '留空不修改' : '设置密码'" />
               </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <span class="text-xs text-slate-500 mb-1 block">姓名</span>
-                <input v-model="formName" class="input-field !py-1.5 !text-sm" placeholder="真实姓名" />
+                <input v-model="formName" name="name" class="input-field !py-1.5 !text-sm" placeholder="真实姓名" />
               </div>
               <div>
                 <span class="text-xs text-slate-500 mb-1 block">警衔/职级</span>
-                <input v-model="formRank" class="input-field !py-1.5 !text-sm" placeholder="如: 二级警督" />
+                <input v-model="formRank" name="rank" class="input-field !py-1.5 !text-sm" placeholder="如: 二级警督" />
               </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <span class="text-xs text-slate-500 mb-1 block">岗位</span>
-                <input v-model="formPosition" class="input-field !py-1.5 !text-sm" placeholder="如: 刑侦民警" />
+                <input v-model="formPosition" name="position" class="input-field !py-1.5 !text-sm" placeholder="如: 刑侦民警" />
               </div>
               <div>
                 <span class="text-xs text-slate-500 mb-1 block">技能特长</span>
-                <input v-model="formSkills" class="input-field !py-1.5 !text-sm" placeholder="逗号分隔，如: Python,数据分析" />
+                <input v-model="formSkills" name="skills" class="input-field !py-1.5 !text-sm" placeholder="逗号分隔，如: Python,数据分析" />
               </div>
             </div>
 
@@ -594,11 +594,11 @@ onMounted(async () => {
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <span class="text-xs text-slate-500 mb-1 block">手机号</span>
-                <input v-model="formPhone" class="input-field !py-1.5 !text-sm" placeholder="手机号" />
+                <input v-model="formPhone" name="phone" class="input-field !py-1.5 !text-sm" placeholder="手机号" />
               </div>
               <div>
                 <span class="text-xs text-slate-500 mb-1 block">邮箱</span>
-                <input v-model="formEmail" class="input-field !py-1.5 !text-sm" placeholder="邮箱地址" />
+                <input v-model="formEmail" name="email" class="input-field !py-1.5 !text-sm" placeholder="邮箱地址" />
               </div>
             </div>
 
@@ -632,11 +632,11 @@ onMounted(async () => {
           <form @submit.prevent="handleCreatePreset" class="space-y-3">
             <div>
               <span class="text-xs text-slate-500 mb-1 block">预设组名称</span>
-              <input v-model="presetName" class="input-field !py-1.5 !text-sm" placeholder="如：研判专班A组" autofocus />
+              <input v-model="presetName" name="name" class="input-field !py-1.5 !text-sm" placeholder="如：研判专班A组" autofocus />
             </div>
             <div>
               <span class="text-xs text-slate-500 mb-1 block">描述（可选）</span>
-              <input v-model="presetDesc" class="input-field !py-1.5 !text-sm" placeholder="简要说明此预设组的用途" />
+              <input v-model="presetDesc" name="description" class="input-field !py-1.5 !text-sm" placeholder="简要说明此预设组的用途" />
             </div>
             <div>
               <span class="text-xs text-slate-500 mb-1 block">适用工作类型</span>

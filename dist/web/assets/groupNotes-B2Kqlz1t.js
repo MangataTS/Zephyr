@@ -1,0 +1,1 @@
+import{n as e,r as t}from"./api-B-lFs09t.js";function n(t,n){return e(`/api/v1/groups/${t}/notes`,n)}function r(e,n){return t(`/api/v1/groups/${e}/notes`,n)}function i(t){return e(`/api/v1/groups/${t}/dashboard`)}function a(t){return e(`/api/v1/rooms/${t}/canvas`)}export{a as i,i as n,n as r,r as t};
